@@ -1,0 +1,64 @@
+---
+description: SupervIA Final Project (2025) — MVP, Lean & Smart
+version: 1.0
+name: SupervIA Final Project
+globs: 
+  - frontend/**
+  - backend/**
+  - infra/**
+  - .cursor/rules/supervia.mdc
+  - CHECKLIST.md
+  - README.md
+alwaysApply: true
+---
+
+// .cursorrules — SupervIA (2025) — MVP Lean, RNCP Ready
+
+// 🌍 CONTEXTE
+// CMS-like IT supervision portal : dashboards drag & drop, unified AI, search, PDF export, notifications, Zabbix (MVP).
+// Stack : modulaire, sécurisée, on-premise, docs & process pro, focus maintenance/évolution.
+
+// FRONTEND
+- Next.js (App Router, React 19+), Redux Toolkit, Tailwind, shadcn/ui, dnd-kit (D&D), FlexSearch (search), jsPDF (PDF)
+- JWT auth, protected routes, RGAA/ARIA, Cypress, ESLint/Prettier, light/dark, Zabbix metrics via backend, react-toastify
+
+// BACKEND
+- Node.js LTS (2025+), Express.js (conventions unifiées)
+- Prisma + PostgreSQL unique
+- OAuth2/JWT (Google, GitHub, local)
+- Zabbix API connector
+- OpenAI SDK (ai-service, GPT-4o-mini+), Nodemailer, socket.io
+- dotenv, Helmet, CORS, rate-limit
+- Jest (unit tests), Swagger/OpenAPI (/docs), endpoints `/health` & `/metrics`
+- Dockerfile (node:latest)
+
+// INFRA
+- Docker Compose (all services, postgres, zabbix, pgadmin), healthchecks, .env, README
+
+// STRUCTURE
+- frontend/, backend/[service]/, infra/
+- /src/ + Dockerfile + README per service
+- /src/routes/, /controllers/, /services/, /models/, /middleware/, swagger.json, index.js everywhere
+
+// CI/CD
+- Docker Compose, GitHub Actions sample, env management, healthchecks
+
+// 📝 EXIGENCES RNCP B2/B4 (must-have)
+- Docs et changelog/bugtracker à jour
+- Dépendances à jour, alertes vulnérabilités, process bugs clair
+- Tous endpoints health/metrics exposés + monitoring/log
+- RGPD, RGAA, OWASP à chaque étape
+- Factorisation/reuse toujours avant création
+- Tests et recette documentés
+
+// 💡 BEST PRACTICES
+- Vérifie feature existante avant ajout/modif (cross-service)
+- Propose plan rapide avant code
+- Minimise duplication, favorise factorisation
+- Code & doc clairs, pas de “full dump” inutile
+- 1 test min/feature majeure, package.json update si nouvelle dépendance
+- Structure, sécurité et accessibilité partout
+
+// ⚡ POWERSHELL par défaut si shell, V0 à V3 (simple = défaut)
+
+// END

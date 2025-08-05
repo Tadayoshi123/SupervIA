@@ -1,0 +1,218 @@
+# Fichier de configuration pour Docker Compose
+# Gère tous les services de l'application SupervIA
+
+x-zabbix-agent-base: &zabbix-agent-base
+  image: zabbix/zabbix-agent:latest
+  restart: unless-stopped
+  depends_on:
+    - zabbix-server
+
+services:
+  # --- Base de données applicative ---
+  postgres:
+    image: postgres:17-alpine
+    container_name: supervia_postgres_app
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_app_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # --- Base de données pour Zabbix ---
+  zabbix-db:
+    image: postgres:17-alpine
+    container_name: supervia_postgres_zabbix
+    environment:
+      POSTGRES_USER: ${ZABBIX_DB_USER}
+      POSTGRES_PASSWORD: ${ZABBIX_DB_PASSWORD}
+      POSTGRES_DB: ${ZABBIX_DB_NAME}
+    volumes:
+      - postgres_zabbix_data:/var/lib/postgresql/data
+    ports: # Uniquement pour le debug, ne pas exposer en prod
+      - "5433:5432" 
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${ZABBIX_DB_USER} -d ${ZABBIX_DB_NAME}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: supervia_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@supervia.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      zabbix-db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # --- Services Zabbix ---
+  zabbix-server:
+    image: zabbix/zabbix-server-pgsql:latest
+    container_name: supervia_zabbix_server
+    ports:
+      - "10051:10051"
+    environment:
+      DB_SERVER_HOST: "zabbix-db"
+      POSTGRES_USER: ${ZABBIX_DB_USER}
+      POSTGRES_PASSWORD: ${ZABBIX_DB_PASSWORD}
+      POSTGRES_DB: ${ZABBIX_DB_NAME}
+    depends_on:
+      zabbix-db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  zabbix-web:
+    image: zabbix/zabbix-web-nginx-pgsql:latest
+    container_name: supervia_zabbix_web
+    ports:
+      - "8080:8080"
+      - "8443:8443"
+    environment:
+      DB_SERVER_HOST: "zabbix-db"
+      POSTGRES_USER: ${ZABBIX_DB_USER}
+      POSTGRES_PASSWORD: ${ZABBIX_DB_PASSWORD}
+      POSTGRES_DB: ${ZABBIX_DB_NAME}
+      ZBX_SERVER_HOST: "zabbix-server"
+    depends_on:
+      zabbix-server:
+        condition: service_started
+    restart: unless-stopped
+  
+  zabbix-agent:
+    image: zabbix/zabbix-agent:latest
+    container_name: supervia_zabbix_agent_docker
+    environment:
+      ZBX_HOSTNAME: "Docker Host"
+      ZBX_SERVER_HOST: "zabbix-server"
+    privileged: true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - zabbix-server
+    restart: unless-stopped
+
+  # --- Services applicatifs SupervIA ---
+  db-service:
+    build:
+      context: ./backend/db-service
+      dockerfile: Dockerfile
+    container_name: supervia_db_service
+    ports:
+      - "3001:3000"
+    env_file: ./.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db-service-zabbix-agent:
+    <<: *zabbix-agent-base
+    container_name: supervia_db_service_zabbix_agent
+    environment:
+      ZBX_SERVER_HOST: "zabbix-server"
+      ZBX_HOSTNAME: "DB Service"
+
+  auth-service:
+    build:
+      context: ./backend/auth-service
+      dockerfile: Dockerfile
+    container_name: supervia_auth_service
+    ports:
+      - "3002:3000"
+    env_file: ./.env
+    depends_on: [db-service]
+    restart: unless-stopped
+
+  auth-service-zabbix-agent:
+    <<: *zabbix-agent-base
+    container_name: supervia_auth_service_zabbix_agent
+    environment:
+      ZBX_SERVER_HOST: "zabbix-server"
+      ZBX_HOSTNAME: "Auth Service"
+
+  metrics-service:
+    build:
+      context: ./backend/metrics-service
+      dockerfile: Dockerfile
+    container_name: supervia_metrics_service
+    ports:
+      - "3003:3000"
+    env_file: ./.env
+    depends_on:
+      - db-service
+      - zabbix-web # Dépend de l'interface web pour les appels API
+    restart: unless-stopped
+
+  metrics-service-zabbix-agent:
+    <<: *zabbix-agent-base
+    container_name: supervia_metrics_service_zabbix_agent
+    environment:
+      ZBX_SERVER_HOST: "zabbix-server"
+      ZBX_HOSTNAME: "Metrics Service"
+
+  notification-service:
+    build:
+      context: ./backend/notification-service
+    container_name: supervia_notification_service
+    ports:
+      - "3004:3000"
+    env_file: ./.env
+    depends_on: [db-service]
+    restart: unless-stopped
+
+  notification-service-zabbix-agent:
+    <<: *zabbix-agent-base
+    container_name: supervia_notification_service_zabbix_agent
+    environment:
+      ZBX_SERVER_HOST: "zabbix-server"
+      ZBX_HOSTNAME: "Notification Service"
+
+  ai-service:
+    build:
+      context: ./backend/ai-service
+    container_name: supervia_ai_service
+    ports:
+      - "3005:3000"
+    env_file: ./.env
+    depends_on: [db-service]
+    restart: unless-stopped
+
+  ai-service-zabbix-agent:
+    <<: *zabbix-agent-base
+    container_name: supervia_ai_service_zabbix_agent
+    environment:
+      ZBX_SERVER_HOST: "zabbix-server"
+      ZBX_HOSTNAME: "AI Service"
+
+  frontend:
+    build:
+      context: ./frontend/supervia
+    container_name: supervia_frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - auth-service
+      - metrics-service
+      - notification-service
+      - ai-service
+    restart: unless-stopped
+
+volumes:
+  postgres_app_data:
+  postgres_zabbix_data:
