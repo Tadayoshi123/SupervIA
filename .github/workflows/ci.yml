@@ -83,14 +83,14 @@ jobs:
     
     - name: Build and test Docker images
       run: |
-        docker-compose build
-        docker-compose up -d postgres
+        docker compose build
+        docker compose up -d postgres
         sleep 10
-        docker-compose up -d db-service
+        docker compose up -d db-service
         sleep 5
-        docker-compose up -d auth-service metrics-service notification-service ai-service
+        docker compose up -d auth-service metrics-service notification-service ai-service
         sleep 5
-        docker-compose up -d frontend
+        docker compose up -d frontend
         sleep 10
         
         # Test health endpoints
@@ -100,7 +100,7 @@ jobs:
         curl -f http://localhost:3004/health || exit 1
         curl -f http://localhost:3005/health || exit 1
         
-        docker-compose down
+        docker compose down
 
   security:
     runs-on: ubuntu-latest
