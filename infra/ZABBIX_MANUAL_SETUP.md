@@ -12,10 +12,10 @@ Après le déploiement, le serveur Zabbix est opérationnel, mais il ne sait pas
 
 ### 1. Accéder à l'interface Web de Zabbix
 
--   Ouvrez votre navigateur et rendez-vous à l'adresse : [http://localhost:8081](http://localhost:8081)
+-   Ouvrez votre navigateur et rendez-vous à l'adresse : [http://localhost:8080](http://localhost:8080)
 -   Connectez-vous avec les identifiants par défaut (configurés dans `docker-compose.yml`) :
     -   **Username** : `Admin`
-    -   **Password** : `[CONFIGURER_VIA_ENV]`
+    -   **Password** : `zabbix` (par défaut)
 
 ### 2. Créer une Action d'Auto-enregistrement
 
@@ -74,3 +74,23 @@ L'agent Zabbix défini dans `docker-compose.yml` (`supervia_zabbix_agent`) devra
 3.  Dans la colonne **Availability**, l'icône ZBX devrait passer au vert après quelques instants, indiquant que la connexion est établie et que la surveillance est active.
 
 Si l'hôte n'apparaît pas immédiatement, patientez une à deux minutes, le temps que l'agent retente une connexion et que le serveur applique l'action.
+
+---
+
+## Dépannage (autoregistration et agents)
+
+Si vous observez dans les logs du serveur Zabbix des messages du type:
+
+- `cannot send list of active checks ... host [X] not found`
+
+Alors il y a généralement un décalage entre le `ZBX_HOSTNAME` déclaré par l'agent et le nom d'hôte existant côté Zabbix. Pour corriger:
+
+1. Dans l'UI Zabbix, allez dans `Monitoring` -> `Hosts` et supprimez les hôtes créés précédemment qui ne correspondent plus.
+2. Vérifiez dans `Alerts` -> `Actions` -> `Autoregistration actions` que l'action est bien `Enabled` et qu'elle contient les opérations:
+   - `Add host`
+   - `Add to host group` (ex: `Linux servers`)
+   - `Link to template` (ex: `Linux by Zabbix agent`, `Zabbix server health`)
+3. Redémarrez le serveur et les agents si nécessaire:
+   - `docker-compose restart zabbix-server zabbix-web`
+   - `docker-compose restart zabbix-agent db-service-zabbix-agent auth-service-zabbix-agent metrics-service-zabbix-agent notification-service-zabbix-agent ai-service-zabbix-agent`
+4. Patientez 1 à 2 minutes et vérifiez que les hôtes réapparaissent et passent en `Available` (icône ZBX verte).
