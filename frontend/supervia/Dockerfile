@@ -18,8 +18,7 @@ FROM node:lts-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Copie directe depuis le contexte (plus robuste en CI)
-COPY ./public ./public
+COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
