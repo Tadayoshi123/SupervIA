@@ -52,13 +52,10 @@ export default function DashboardGrid({ widgets, onRemoveWidget, onUpdateWidget,
             key={widget.id}
             widget={widget}
             onRemove={onRemoveWidget}
-            onUpdateWidget={onUpdateWidget}
             isSelected={selectedWidgetId === widget.id}
             onSelect={onSelectWidget}
             onKeyMove={onKeyMove}
             gridSize={gridSize}
-            gridCols={gridCols}
-            gridRows={gridRows}
           />
         ))}
       </div>
@@ -69,25 +66,19 @@ export default function DashboardGrid({ widgets, onRemoveWidget, onUpdateWidget,
 interface DraggableWidgetProps {
   widget: Widget;
   onRemove: (id: string) => void;
-  onUpdateWidget: (id: string, updates: Partial<Widget>) => void;
   isSelected?: boolean;
   onSelect?: (id: string) => void;
   onKeyMove?: (id: string, dx: number, dy: number) => void;
   gridSize: number;
-  gridCols: number;
-  gridRows: number;
 }
 
 function DraggableWidget({ 
   widget, 
   onRemove, 
-  onUpdateWidget,
   isSelected,
   onSelect,
   onKeyMove,
   gridSize,
-  gridCols,
-  gridRows,
 }: DraggableWidgetProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: widget.id,

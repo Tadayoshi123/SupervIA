@@ -5,7 +5,7 @@ import { selectItemsForHost, selectProblems, selectHosts } from '@/lib/features/
 import { Widget } from '@/types/dashboard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { X, BarChart3, Activity, AlertCircle, Gauge, FileText, TrendingUp, CheckCircle, XCircle } from 'lucide-react';
+import { X, BarChart3, Activity, AlertCircle, Gauge, FileText, CheckCircle, XCircle } from 'lucide-react';
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 
 interface WidgetComponentProps {
@@ -80,7 +80,6 @@ export default function WidgetComponent({ widget, onRemove, isDragging }: Widget
   };
 
   const chartData = generateChartData();
-  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
   // Rendu du contenu du widget selon son type
   const renderWidgetContent = () => {
@@ -186,7 +185,7 @@ export default function WidgetComponent({ widget, onRemove, isDragging }: Widget
             const key = (i.key_ || '').toLowerCase();
             return key.includes('icmpping') || key.includes('agent.ping') || key.includes('availability');
           });
-          if (auto) statusItem = auto as any;
+          if (auto) statusItem = auto;
         }
         const isOnline = Number(statusItem?.lastvalue || 0) > 0;
         return (

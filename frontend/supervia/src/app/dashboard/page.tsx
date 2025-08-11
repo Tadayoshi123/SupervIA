@@ -13,7 +13,6 @@ import {
   selectItemsForHost,
   selectMetricsLoading, 
   selectMetricsError,
-  selectHostsStats,
   selectProblemsBySeverity,
   clearError 
 } from '@/lib/features/metrics/metricsSlice';
@@ -39,8 +38,6 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  LineChart,
-  Line,
   AreaChart,
   Area,
 } from 'recharts';
@@ -182,7 +179,8 @@ export default function DashboardPage() {
       const sortedTs = Array.from(allTs).sort((a, b) => a - b);
 
       const rows = sortedTs.map((ts) => {
-        const row: Record<string, number | null> = { ts } as any;
+        const row: Record<string, number | null> = {};
+        row.ts = ts;
         seriesData.forEach((arr, idx) => {
           const key = `s${idx}`;
           const found = arr.find((p) => p.ts === ts);
@@ -307,14 +305,14 @@ export default function DashboardPage() {
   };
 
   // Couleurs cohérentes pour les sévérités
-  const severityFill: Record<string, string> = {
+  const severityFill = useMemo<Record<string, string>>(() => ({
     '0': '#9ca3af',
     '1': '#60a5fa',
     '2': '#fbbf24',
     '3': '#fb923c',
     '4': '#ef4444',
     '5': '#8b5cf6',
-  };
+  }), []);
 
   // Données préparées pour les graphiques
   const availabilityPercent = useMemo(() => (
@@ -333,7 +331,7 @@ export default function DashboardPage() {
       value: count,
       fill: severityFill[sev] || '#9ca3af',
     }))
-  ), [problemsBySeverity]);
+  ), [problemsBySeverity, severityFill]);
 
   const topItemsBarData = useMemo(() => (
     (topItems.length > 0 ? topItems : firstHostItems)
@@ -443,7 +441,7 @@ export default function DashboardPage() {
                       <Legend verticalAlign="bottom" height={24} />
                     </PieChart>
                   </ResponsiveContainer>
-                  <figcaption id="figcap-availability" className="sr-only">{availabilityPercent}% d'hôtes en ligne</figcaption>
+                  <figcaption id="figcap-availability" className="sr-only">{availabilityPercent}% d\u2019hôtes en ligne</figcaption>
                 </figure>
                 <div className="sr-only">
                   <table>
@@ -514,7 +512,7 @@ export default function DashboardPage() {
                               <Cell key={`cell-${idx}`} fill="#22d3ee" />
                             ))}
                           </Bar>
-                          <RechartsTooltip formatter={(v: number, _n, p: any) => [`${v} ${p?.payload?.units || ''}`.trim(), p?.payload?.name]} />
+                          <RechartsTooltip formatter={(v: number, _n: string, context: { payload?: { units?: string; name?: string } }) => [`${v} ${context?.payload?.units || ''}`.trim(), context?.payload?.name || 'Valeur']} />
                         </BarChart>
                       </ResponsiveContainer>
                     </figure>
@@ -762,7 +760,7 @@ export default function DashboardPage() {
         <Card role="tabpanel" id="panel-trends" aria-labelledby="tab-trends" aria-busy={isLoading}>
           <CardHeader>
             <CardTitle>Tendances</CardTitle>
-            <CardDescription>Comparez jusqu'à 3 métriques sur une période</CardDescription>
+            <CardDescription>Comparez jusqu&apos;à 3 métriques sur une période</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col gap-3 md:flex-row md:items-end md:gap-4 mb-4">

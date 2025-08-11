@@ -1,6 +1,6 @@
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useAppSelector } from '@/lib/hooks';
 import { selectIsAuthenticated } from '@/lib/features/auth/authSlice';
@@ -14,7 +14,7 @@ const GRID_SIZE = 50;
 export default function DashboardViewPage() {
   const params = useParams();
   const id = Number(params.id);
-  const router = useRouter();
+  
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
   const [loading, setLoading] = useState(true);
   const [dashboard, setDashboard] = useState<DashboardDto | null>(null);

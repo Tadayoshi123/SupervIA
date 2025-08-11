@@ -39,16 +39,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
   }, [theme]);
 
-  const setTheme = (next: Theme) => {
+  const setTheme = React.useCallback((next: Theme) => {
     setThemeState(next);
     if (typeof window !== 'undefined') {
       localStorage.setItem('supervia_theme', next);
     }
-  };
+  }, []);
 
-  const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
+  const toggleTheme = React.useCallback(() => setTheme(theme === 'dark' ? 'light' : 'dark'), [theme, setTheme]);
 
-  const value = useMemo<ThemeContextValue>(() => ({ theme, setTheme, toggleTheme }), [theme]);
+  const value = useMemo<ThemeContextValue>(() => ({ theme, setTheme, toggleTheme }), [theme, setTheme, toggleTheme]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }

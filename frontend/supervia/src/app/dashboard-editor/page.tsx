@@ -27,7 +27,7 @@ import Link from 'next/link';
 import DashboardGrid from '@/components/dashboard/DashboardGrid';
 import WidgetSelector from '@/components/dashboard/WidgetSelector';
 import WidgetComponent from '@/components/dashboard/WidgetComponent';
-import { Widget, WidgetType, WidgetConfig } from '@/types/dashboard';
+import { Widget, WidgetType } from '@/types/dashboard';
 import Breadcrumbs from '@/components/layout/Breadcrumbs';
 
 export default function DashboardEditorPage() {
