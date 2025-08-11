@@ -1,6 +1,6 @@
 // src/lib/features/metrics/metricsSlice.ts
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import metricsService, { ZabbixHost, ZabbixItem, ZabbixProblem } from './metricsService';
+import metricsService, { ZabbixHost, ZabbixItem, ZabbixProblem, HostsSummary } from './metricsService';
 import { RootState } from '@/lib/store/store';
 
 // État initial du slice
@@ -11,6 +11,7 @@ interface MetricsState {
   isLoading: boolean;
   error: string | null;
   lastFetch: number | null; // Timestamp de la dernière récupération
+  hostsSummary?: HostsSummary | null;
 }
 
 const initialState: MetricsState = {
@@ -20,6 +21,7 @@ const initialState: MetricsState = {
   isLoading: false,
   error: null,
   lastFetch: null,
+  hostsSummary: null,
 };
 
 // Thunks asynchrones pour récupérer les données de Zabbix
@@ -33,6 +35,20 @@ export const fetchHosts = createAsyncThunk<ZabbixHost[], void, { rejectValue: st
       return hosts;
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Erreur lors de la récupération des hôtes';
+      return rejectWithValue(message);
+    }
+  }
+);
+
+// Récupérer le résumé des hôtes
+export const fetchHostsSummary = createAsyncThunk<HostsSummary, void, { rejectValue: string }>(
+  'metrics/fetchHostsSummary',
+  async (_, { rejectWithValue }) => {
+    try {
+      const summary = await metricsService.getHostsSummary();
+      return summary;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Erreur lors du résumé des hôtes';
       return rejectWithValue(message);
     }
   }
@@ -135,6 +151,19 @@ export const metricsSlice = createSlice({
       .addCase(fetchProblems.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload ?? 'Erreur lors de la récupération des problèmes';
+      })
+      // Résumé des hôtes
+      .addCase(fetchHostsSummary.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchHostsSummary.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.hostsSummary = action.payload;
+      })
+      .addCase(fetchHostsSummary.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload ?? "Erreur lors du résumé des hôtes";
       });
   },
 });

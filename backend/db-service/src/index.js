@@ -33,9 +33,11 @@ app.get('/health', (req, res) => {
 
 // Importation des routes
 const userRoutes = require('./routes/userRoutes');
+const dashboardRoutes = require('./routes/dashboardRoutes');
 
 // Utilisation des routes avec un préfixe /api
 app.use('/api', userRoutes);
+app.use('/api', dashboardRoutes);
 
 // Middleware de gestion des erreurs (doit être le dernier)
 app.use(errorHandler);

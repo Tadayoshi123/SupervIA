@@ -203,6 +203,8 @@ services:
   frontend:
     build:
       context: ./frontend/supervia
+      args:
+        - NEXT_TELEMETRY_DISABLED=1
     container_name: supervia_frontend
     ports:
       - "3000:3000"

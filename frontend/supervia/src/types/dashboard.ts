@@ -2,6 +2,14 @@
 
 export type WidgetType = 'metric' | 'chart' | 'status' | 'text' | 'problems';
 
+export type ChartType = 'area' | 'line' | 'bar';
+
+export interface WidgetConfig {
+  chartType?: ChartType;
+  color?: string;
+  text?: string;
+}
+
 export interface Widget {
   id: string;
   type: WidgetType;
@@ -12,7 +20,7 @@ export interface Widget {
   height: number;
   hostId?: string;
   itemId?: string;
-  config?: Record<string, unknown>;
+  config?: WidgetConfig;
 }
 
 export interface DashboardConfig {

@@ -24,6 +24,7 @@ model User {
   password      String? // Pour l'authentification locale
   accounts      Account[]
   sessions      Session[]
+  dashboards    Dashboard[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
@@ -64,4 +65,33 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+// ========================================
+// Modèles Dashboards
+// ========================================
+
+model Dashboard {
+  id        Int       @id @default(autoincrement())
+  name      String
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  widgets   DashboardWidget[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model DashboardWidget {
+  id          Int       @id @default(autoincrement())
+  dashboardId Int
+  dashboard   Dashboard @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
+  type        String
+  title       String
+  x           Int
+  y           Int
+  width       Int
+  height      Int
+  hostId      String?
+  itemId      String?
+  config      Json?
 }

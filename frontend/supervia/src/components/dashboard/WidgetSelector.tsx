@@ -112,7 +112,7 @@ export default function WidgetSelector({ hosts, onAddWidget }: WidgetSelectorPro
           </div>
           
           {/* Configuration pour les widgets nécessitant un hôte et une métrique */}
-          {(selectedType === 'metric' || selectedType === 'chart' || selectedType === 'status') && (
+          {(selectedType === 'metric' || selectedType === 'chart') && (
             <>
               {/* Sélection de l'hôte */}
               <div className="mb-4">
@@ -151,6 +151,28 @@ export default function WidgetSelector({ hosts, onAddWidget }: WidgetSelectorPro
               )}
             </>
           )}
+
+          {/* Widget Statut: seulement l'hôte, la métrique sera auto‑détectée */}
+          {selectedType === 'status' && (
+            <>
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-1">Hôte</label>
+                <Select value={selectedHostId} onValueChange={setSelectedHostId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner un hôte" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {hosts.map((host) => (
+                      <SelectItem key={host.hostid} value={host.hostid}>
+                        {host.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <p className="text-xs text-muted-foreground">La métrique de disponibilité sera détectée automatiquement (icmp ping / agent ping).</p>
+            </>
+          )}
           
           {/* Configuration pour le widget problems */}
           {selectedType === 'problems' && (
@@ -179,8 +201,8 @@ export default function WidgetSelector({ hosts, onAddWidget }: WidgetSelectorPro
         onClick={handleAddWidget} 
         className="w-full"
         disabled={
-          (selectedType === 'metric' || selectedType === 'chart' || selectedType === 'status') && 
-          (!selectedHostId || !selectedItemId)
+          (selectedType === 'metric' || selectedType === 'chart') && (!selectedHostId || !selectedItemId) ||
+          (selectedType === 'status' && !selectedHostId)
         }
       >
         Ajouter le widget

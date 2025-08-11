@@ -1,10 +1,12 @@
 # Dockerfile pour le db-service, optimisé pour Prisma
 
 # Étape 1: Installation des dépendances
+# syntax=docker/dockerfile:1.6
+
 FROM node:lts-alpine AS dependencies
 WORKDIR /usr/src/app
 COPY package*.json ./
-RUN npm install
+RUN --mount=type=cache,target=/root/.npm npm ci || npm install
 
 # Étape 2: Build & Génération Prisma
 FROM node:lts-alpine AS builder
@@ -26,6 +28,8 @@ COPY --from=builder /usr/src/app/prisma ./prisma
 # Copier le code source de l'application
 COPY src ./src
 COPY package*.json ./
+RUN addgroup -S nodeapp && adduser -S nodeapp -G nodeapp
 
 EXPOSE 3000
+USER nodeapp
 CMD ["node", "src/index.js"]

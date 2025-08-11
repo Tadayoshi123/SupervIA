@@ -1,5 +1,6 @@
 // src/lib/features/metrics/metricsService.ts
 import axios from 'axios';
+import { jwtDecode } from 'jwt-decode';
 
 const METRICS_API_URL = process.env.NEXT_PUBLIC_METRICS_API_URL || 'http://localhost:3003/api/metrics';
 
@@ -55,12 +56,46 @@ export interface ZabbixProblem {
   }>;
 }
 
+export interface HostsSummary {
+  total: number;
+  online: number;
+  offline: number;
+  updatedAt: string;
+}
+
+export interface ItemHistoryPoint {
+  clock: string; // epoch seconds as string
+  value: string; // numeric value as string
+}
+
+// Vérifie et gère un JWT expiré
+const isTokenExpired = (token: string): boolean => {
+  try {
+    const decoded = jwtDecode<{ exp?: number }>(token);
+    if (!decoded.exp) return true;
+    return decoded.exp * 1000 < Date.now();
+  } catch {
+    return true;
+  }
+};
+
 // Configuration des en-têtes avec le token JWT
 const createAuthHeaders = () => {
-  const token = localStorage.getItem('token');
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  if (token && isTokenExpired(token)) {
+    // Nettoyage et redirection douce si le token est périmé
+    localStorage.removeItem('token');
+    if (typeof window !== 'undefined') {
+      // éviter boucle infinie si on est déjà sur /login
+      if (!window.location.pathname.startsWith('/login')) {
+        window.location.href = '/login';
+      }
+    }
+    return { 'Content-Type': 'application/json' };
+  }
   return {
     'Content-Type': 'application/json',
-    ...(token && { 'Authorization': `Bearer ${token}` }),
+    ...(token && { Authorization: `Bearer ${token}` }),
   };
 };
 
@@ -88,10 +123,38 @@ const getProblems = async (): Promise<ZabbixProblem[]> => {
   return response.data;
 };
 
+const getHostsSummary = async (): Promise<HostsSummary> => {
+  const response = await axios.get(`${METRICS_API_URL}/hosts/summary`, {
+    headers: createAuthHeaders(),
+  });
+  return response.data;
+};
+
+const getTopItems = async (hostid: string, limit = 5): Promise<ZabbixItem[]> => {
+  const response = await axios.get(`${METRICS_API_URL}/items/${hostid}/top?limit=${limit}`, {
+    headers: createAuthHeaders(),
+  });
+  return response.data;
+};
+
+const getItemHistory = async (itemid: string, from?: number, to?: number, limit?: number): Promise<ItemHistoryPoint[]> => {
+  const qs = new URLSearchParams();
+  if (from) qs.set('from', String(from));
+  if (to) qs.set('to', String(to));
+  if (limit) qs.set('limit', String(limit));
+  const response = await axios.get(`${METRICS_API_URL}/history/${itemid}?${qs.toString()}`, {
+    headers: createAuthHeaders(),
+  });
+  return response.data;
+};
+
 const metricsService = {
   getHosts,
   getItemsForHost,
   getProblems,
+  getHostsSummary,
+  getTopItems,
+  getItemHistory,
 };
 
 export default metricsService;

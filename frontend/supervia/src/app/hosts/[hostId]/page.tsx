@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import { 
@@ -15,8 +15,12 @@ import { selectIsAuthenticated } from '@/lib/features/auth/authSlice';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
+import Breadcrumbs from '@/components/layout/Breadcrumbs';
+import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
 
 export default function HostDetailPage() {
   const params = useParams();
@@ -99,8 +103,20 @@ export default function HostDetailPage() {
     return '';
   };
   
-  // Grouper les items par type
-  const groupedItems = items.reduce((acc, item) => {
+  // Filtre global sur les métriques (nom, clé, unités)
+  const [metricQuery, setMetricQuery] = useState<string>('');
+  const normalizedQuery = metricQuery.trim().toLowerCase();
+  const visibleItems = useMemo(() => {
+    if (!normalizedQuery) return items;
+    return items.filter((it) =>
+      (it.name || '').toLowerCase().includes(normalizedQuery) ||
+      (it.key_ || '').toLowerCase().includes(normalizedQuery) ||
+      (it.units || '').toLowerCase().includes(normalizedQuery)
+    );
+  }, [items, normalizedQuery]);
+
+  // Grouper les items visibles par type (préfixe)
+  const groupedItems = visibleItems.reduce((acc, item) => {
     // Extraire le préfixe de la clé (avant le premier point)
     const prefix = item.key_.split('.')[0];
     if (!acc[prefix]) {
@@ -121,6 +137,7 @@ export default function HostDetailPage() {
   if (!host) {
     return (
       <div className="container mx-auto p-6">
+        <Breadcrumbs items={[{ href: '/', label: 'Accueil' }, { href: '/hosts', label: 'Hôtes' }, { href: '#', label: 'Introuvable' }]} />
         <div className="flex items-center mb-6">
           <Link href="/dashboard" className="mr-4">
             <Button variant="outline" size="icon">
@@ -149,6 +166,7 @@ export default function HostDetailPage() {
   
   return (
     <div className="container mx-auto p-6">
+      <Breadcrumbs items={[{ href: '/', label: 'Accueil' }, { href: '/hosts', label: 'Hôtes' }, { href: '#', label: host.name }]} />
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center">
@@ -159,7 +177,7 @@ export default function HostDetailPage() {
           </Link>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-3xl font-bold">{host.name}</h1>
+              <h1 className="text-3xl font-extrabold tracking-tight text-tech-gradient">{host.name}</h1>
               <span className={`px-2 py-1 text-xs rounded-full ${statusInfo.color} ${statusInfo.bgColor}`}>
                 {statusInfo.status}
               </span>
@@ -185,7 +203,7 @@ export default function HostDetailPage() {
       </div>
       
       {/* Informations sur l'hôte */}
-      <Card className="mb-8">
+      <Card className="mb-8" role="region" aria-label="Informations sur l'hôte">
         <CardHeader>
           <CardTitle>Informations sur l&apos;hôte</CardTitle>
           <CardDescription>Détails techniques de l&apos;hôte Zabbix</CardDescription>
@@ -224,68 +242,86 @@ export default function HostDetailPage() {
         </CardContent>
       </Card>
       
+      {/* Barre outils & liste des métriques */}
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" aria-live="polite">
+        <div className="text-sm text-muted-foreground">
+          <span className="font-medium">{visibleItems.length}</span> métriques affichées
+          {Object.keys(groupedItems).length > 0 && (
+            <span> • <span className="font-medium">{Object.keys(groupedItems).length}</span> catégories</span>
+          )}
+        </div>
+        <div className="w-full sm:w-80">
+          <Input
+            value={metricQuery}
+            onChange={(e) => setMetricQuery(e.target.value)}
+            placeholder="Filtrer par nom, clé ou unité"
+            aria-label="Filtrer les métriques"
+          />
+        </div>
+      </div>
+
       {/* Liste des métriques */}
       {isLoading && items.length === 0 ? (
-        <div className="flex items-center justify-center py-8">
-          <RefreshCw className="mr-2 h-6 w-6 animate-spin" />
-          <p className="text-lg">Chargement des métriques...</p>
+        <div className="grid grid-cols-1 gap-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-10" />
+          ))}
         </div>
       ) : items.length === 0 ? (
         <Card>
           <CardContent className="py-8">
-            <div className="flex items-center justify-center">
-              <p className="text-lg text-muted-foreground">Aucune métrique disponible pour cet hôte</p>
-            </div>
+            <EmptyState title="Aucune métrique disponible" description="Sélectionnez un autre hôte ou réessayez plus tard." />
           </CardContent>
         </Card>
       ) : (
-        <>
-          {/* Affichage des items groupés par type */}
-          {Object.entries(groupedItems).map(([prefix, prefixItems]) => (
-            <Card key={prefix} className="mb-6">
-              <CardHeader>
-                <CardTitle>Métriques {prefix}</CardTitle>
-                <CardDescription>
-                  {prefixItems.length} métriques disponibles
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-3 px-4 font-medium">Nom</th>
-                        <th className="text-left py-3 px-4 font-medium">Clé</th>
-                        <th className="text-left py-3 px-4 font-medium">Dernière valeur</th>
-                        <th className="text-left py-3 px-4 font-medium">Unité</th>
-                        <th className="text-left py-3 px-4 font-medium">Dernière mise à jour</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {prefixItems.map((item) => (
-                        <tr key={item.itemid} className="border-b hover:bg-muted/50">
-                          <td className="py-3 px-4">{item.name}</td>
-                          <td className="py-3 px-4">
-                            <code className="text-xs bg-muted px-1 py-0.5 rounded">{item.key_}</code>
-                          </td>
-                          <td className={`py-3 px-4 ${getValueClass(item.lastvalue, item.units)}`}>
-                            {formatValue(item.lastvalue, item.units)}
-                          </td>
-                          <td className="py-3 px-4">{item.units || '-'}</td>
-                          <td className="py-3 px-4">
-                            {item.lastclock 
-                              ? new Date(parseInt(item.lastclock) * 1000).toLocaleString()
-                              : 'N/A'}
-                          </td>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {Object.entries(groupedItems)
+            .sort((a, b) => a[0].localeCompare(b[0]))
+            .map(([prefix, prefixItems]) => (
+              <Card key={prefix} className="h-80 flex flex-col" role="region" aria-label={`Catégorie ${prefix}`}>
+                <CardHeader className="py-3 px-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm">Métriques {prefix}</CardTitle>
+                    <span className="text-xs text-muted-foreground" aria-label="Nombre de métriques">{prefixItems.length}</span>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex-1 min-h-0 overflow-auto px-0">
+                  <div className="px-4">
+                    <table className="w-full text-xs" aria-label={`Métriques ${prefix}`}>
+                      <thead className="sticky top-0 bg-card z-10">
+                        <tr className="border-b">
+                          <th className="text-left py-2 px-2 font-medium">Nom</th>
+                          <th className="text-left py-2 px-2 font-medium">Clé</th>
+                          <th className="text-left py-2 px-2 font-medium">Valeur</th>
+                          <th className="text-left py-2 px-2 font-medium">Unité</th>
+                          <th className="text-left py-2 px-2 font-medium">Maj</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </>
+                      </thead>
+                      <tbody>
+                        {prefixItems.map((item) => (
+                          <tr key={item.itemid} className="border-b hover:bg-muted/50">
+                            <td className="py-2 px-2 truncate" title={item.name}>{item.name}</td>
+                            <td className="py-2 px-2">
+                              <code className="text-[10px] bg-muted px-1 py-0.5 rounded" title={item.key_}>{item.key_}</code>
+                            </td>
+                            <td className={`py-2 px-2 ${getValueClass(item.lastvalue, item.units)}`}>
+                              {formatValue(item.lastvalue, item.units)}
+                            </td>
+                            <td className="py-2 px-2">{item.units || '-'}</td>
+                            <td className="py-2 px-2">
+                              {item.lastclock
+                                ? new Date(parseInt(item.lastclock) * 1000).toLocaleTimeString()
+                                : 'N/A'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+        </div>
       )}
     </div>
   );
