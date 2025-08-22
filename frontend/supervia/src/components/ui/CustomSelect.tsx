@@ -35,6 +35,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
   const [focusedIndex, setFocusedIndex] = useState(-1)
   const selectRef = useRef<HTMLDivElement>(null)
   const optionsRef = useRef<HTMLDivElement>(null)
+  const listboxId = useRef<string>(`listbox-${Math.random().toString(36).slice(2)}`)
 
   const selectedOption = options.find(option => option.value === value)
 
@@ -170,6 +171,8 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
         aria-expanded={isOpen}
         aria-haspopup="listbox"
         aria-label={selectedOption?.label || placeholder}
+        aria-controls={String(listboxId.current)}
+        aria-activedescendant={isOpen && focusedIndex >= 0 ? `${String(listboxId.current)}-opt-${focusedIndex}` : undefined}
       >
         <span className={cn(
           'flex-1 text-left truncate',
@@ -195,6 +198,8 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
             'max-h-60 overflow-auto'
           )}
           ref={optionsRef}
+          id={String(listboxId.current)}
+          role="listbox"
         >
           {options.map((option, index) => (
             <div
@@ -208,6 +213,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
               )}
               onClick={() => handleOptionSelect(option)}
               role="option"
+              id={`${String(listboxId.current)}-opt-${index}`}
               aria-selected={option.value === value}
             >
               <span className="flex-1 truncate">{option.label}</span>

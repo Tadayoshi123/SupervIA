@@ -6,8 +6,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useAppSelector } from '@/lib/hooks';
 import { selectIsAuthenticated } from '@/lib/features/auth/authSlice';
 import { 
-  Activity, 
-  BarChart3, 
   Brain, 
   CheckCircle, 
   Eye, 
@@ -39,7 +37,7 @@ export default function Home() {
               <span className="text-tech-gradient">SupervIA</span>
             </h1>
             <p className="text-xl md:text-2xl text-gray-700 dark:text-gray-300 max-w-3xl mx-auto mb-12 leading-relaxed">
-              Transformez votre infrastructure monitoring avec l'intelligence artificielle, 
+              Transformez votre infrastructure monitoring avec l&apos;intelligence artificielle, 
               des tableaux de bord intuitifs et une <strong>compatibilité étendue</strong>
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
@@ -54,7 +52,7 @@ export default function Home() {
               </div>
               <div className="flex items-center gap-2">
                 <Users className="h-4 w-4 text-blue-500" />
-                Gestion d'équipe
+                Gestion d&apos;équipe
               </div>
               <div className="flex items-center gap-2">
                 <Star className="h-4 w-4 text-yellow-500" />
@@ -73,7 +71,7 @@ export default function Home() {
               Pourquoi choisir <span className="text-tech-gradient">SupervIA</span> ?
             </h2>
             <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-              Une plateforme complète qui révolutionne la supervision d'infrastructure
+              Une plateforme complète qui révolutionne la supervision d&apos;infrastructure
             </p>
           </div>
 
@@ -106,10 +104,10 @@ export default function Home() {
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               <div>
                 <h2 className="text-3xl md:text-4xl font-bold mb-6">
-                  Superviser n'a jamais été aussi <span className="text-tech-gradient">simple</span>
+                  Superviser n&apos;a jamais été aussi <span className="text-tech-gradient">simple</span>
                 </h2>
                 <p className="text-lg text-gray-600 dark:text-gray-400 mb-8">
-                  SupervIA combine la puissance de Zabbix avec l'intelligence artificielle 
+                  SupervIA combine la puissance de Zabbix avec l&apos;intelligence artificielle 
                   pour vous offrir une expérience de monitoring révolutionnaire.
                 </p>
                 <div className="space-y-4">
@@ -241,7 +239,7 @@ const features = [
   {
     icon: Brain,
     title: 'IA intégrée',
-    description: 'Détection d\'anomalies automatique, prévisions et suggestions intelligentes pour optimiser vos performances'
+    description: 'Détection d&apos;anomalies automatique, prévisions et suggestions intelligentes pour optimiser vos performances'
   },
   {
     icon: LineChart,
@@ -251,7 +249,7 @@ const features = [
   {
     icon: Globe,
     title: 'Compatibilité multi-solutions',
-    description: 'Connectivité avec Zabbix et d\'autres solutions de monitoring via API'
+    description: 'Connectivité avec Zabbix et d&apos;autres solutions de monitoring via API'
   },
   {
     icon: Gauge,
@@ -271,7 +269,7 @@ const benefits = [
   },
   {
     title: 'Évolutif et performant',
-    description: 'Architecture microservices capable de gérer des milliers d\'hôtes de toutes plateformes simultanément'
+    description: 'Architecture microservices capable de gérer des milliers d&apos;hôtes de toutes plateformes simultanément'
   },
   {
     title: 'Sécurité renforcée',

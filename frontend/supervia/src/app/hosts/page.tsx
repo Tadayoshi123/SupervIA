@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import { fetchHosts, selectHosts, selectMetricsLoading } from '@/lib/features/metrics/metricsSlice';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useRouter } from 'next/navigation';
@@ -23,7 +23,6 @@ import {
   Monitor,
   Globe,
   Shield,
-  AlertTriangle
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 

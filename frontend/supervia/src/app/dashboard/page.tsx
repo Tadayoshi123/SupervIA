@@ -3,7 +3,7 @@
 
 //
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
-import { selectUser, selectIsAuthenticated, setCredentials } from '@/lib/features/auth/authSlice';
+import { selectUser, selectIsAuthenticated} from '@/lib/features/auth/authSlice';
 import { 
   fetchHosts, 
   fetchProblems,
@@ -45,8 +45,6 @@ import {
   Cell,
   Tooltip as RechartsTooltip,
   Legend,
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -55,7 +53,6 @@ import {
 } from 'recharts';
 import { fetchHostsSummary, selectHostsStats as selectHostsStatsRaw } from '@/lib/features/metrics/metricsSlice';
 import metricsService, { ZabbixItem } from '@/lib/features/metrics/metricsService';
-import { jwtDecode } from 'jwt-decode';
 
 type TabKey = 'overview' | 'problems' | 'trends';
 
@@ -652,7 +649,7 @@ export default function DashboardPage() {
                         />
                       </PieChart>
                     </ResponsiveContainer>
-                    <figcaption id="figcap-availability" className="sr-only">{availabilityPercent}% d'hôtes en ligne</figcaption>
+                    <figcaption id="figcap-availability" className="sr-only">{availabilityPercent}% d&apos;hôtes en ligne</figcaption>
                   </figure>
                   <div className="sr-only">
                     <table>
@@ -1111,7 +1108,7 @@ export default function DashboardPage() {
                              problems.length <= 5 ? 'Modéré' : 'Élevé'}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            Niveau d'alerte
+                            Niveau d&apos;alerte
                           </div>
                         </div>
                       )}

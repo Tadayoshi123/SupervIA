@@ -86,7 +86,7 @@ export default function WidgetSelector({ hosts, onAddWidget }: WidgetSelectorPro
       label: 'Métriques simples',
       icon: PieChart,
       widgets: [
-        { type: 'metricValue' as WidgetType, label: 'Valeur métrique', icon: FileText, description: 'Affichage d\'une métrique unique' }
+        { type: 'metricValue' as WidgetType, label: 'Valeur métrique', icon: FileText, description: 'Affichage d&apos;une métrique unique' }
       ]
     }
   };
@@ -291,7 +291,7 @@ export default function WidgetSelector({ hosts, onAddWidget }: WidgetSelectorPro
           {selectedType === 'gauge' && (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Seuil d'alerte</label>
+                <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Seuil d&apos;alerte</label>
                 <Input
                   type="number"
                   value={warn}

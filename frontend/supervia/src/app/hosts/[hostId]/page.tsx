@@ -22,9 +22,7 @@ import {
   Server, 
   Activity, 
   CheckCircle2, 
-  XCircle, 
-  Wifi, 
-  WifiOff,
+  XCircle,
   Monitor,
   Globe,
   Shield,
@@ -133,8 +131,8 @@ export default function HostDetailPage() {
     // Mots-clés indiquant que "plus c'est haut, mieux c'est" (disponible, libre, etc.)
     const higherIsBetterKeywords = ['available', 'free', 'idle', 'pfree'];
 
-    let isLowerBetter = lowerIsBetterKeywords.some(k => lowerKey.includes(k));
-    let isHigherBetter = higherIsBetterKeywords.some(k => lowerKey.includes(k));
+    const isLowerBetter = lowerIsBetterKeywords.some(k => lowerKey.includes(k));
+    const isHigherBetter = higherIsBetterKeywords.some(k => lowerKey.includes(k));
 
     // Cas spécifique pour éviter les conflits (ex: "used memory available")
     if (isLowerBetter && isHigherBetter) return '';
@@ -538,7 +536,7 @@ export default function HostDetailPage() {
           </div>
           {metricQuery && (
             <p className="text-sm text-muted-foreground">
-              {visibleItems.length} résultat{visibleItems.length > 1 ? 's' : ''} pour "{metricQuery}"
+              {visibleItems.length} résultat{visibleItems.length > 1 ? 's' : ''} pour &ldquo;{metricQuery}&rdquo;
             </p>
           )}
         </div>

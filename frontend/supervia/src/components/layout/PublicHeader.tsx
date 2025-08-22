@@ -60,7 +60,7 @@ export default function PublicHeader() {
               </Link>
               <Link href="/register">
                 <Button size="sm" className="bg-tech-gradient text-white hover:opacity-90">
-                  S'inscrire
+                    S&apos;inscrire
                 </Button>
               </Link>
             </div>

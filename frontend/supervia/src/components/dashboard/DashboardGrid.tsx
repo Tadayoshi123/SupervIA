@@ -145,7 +145,7 @@ function DraggableWidget({
       onClick={handleClick}
       tabIndex={tabIndex}
       role="button"
-      aria-selected={isSelected}
+      aria-pressed={isSelected}
       aria-grabbed={isDragging}
       onKeyDown={handleKeyDown}
       suppressHydrationWarning

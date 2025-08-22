@@ -1,8 +1,8 @@
 // src/lib/features/dashboard/dashboardService.ts
 import axios from 'axios';
 
-// Fallback dev: db-service exposé sur 3001 via docker-compose
-const DB_API_URL = process.env.NEXT_PUBLIC_DB_API_URL || 'http://localhost:3001/api';
+// BFF proxy Next.js pour éviter d'exposer la clé interne
+const BFF_DB_API_URL = '/api/bff/db';
 
 export type DashboardWidgetDto = {
   id?: number;
@@ -35,31 +35,31 @@ const createAuthHeaders = () => {
 };
 
 async function createDashboard(name: string, userId: number, widgets: DashboardWidgetDto[]): Promise<DashboardDto> {
-  const res = await axios.post(`${DB_API_URL}/dashboards`, { name, userId, widgets }, {
+  const res = await axios.post(`${BFF_DB_API_URL}/dashboards`, { name, userId, widgets }, {
     headers: createAuthHeaders(),
   });
   return res.data;
 }
 
 async function listDashboards(userId: number): Promise<DashboardDto[]> {
-  const res = await axios.get(`${DB_API_URL}/users/${userId}/dashboards`, {
+  const res = await axios.get(`${BFF_DB_API_URL}/users/${userId}/dashboards`, {
     headers: createAuthHeaders(),
   });
   return res.data;
 }
 
 async function getDashboard(id: number): Promise<DashboardDto> {
-  const res = await axios.get(`${DB_API_URL}/dashboards/${id}`, { headers: createAuthHeaders() });
+  const res = await axios.get(`${BFF_DB_API_URL}/dashboards/${id}`, { headers: createAuthHeaders() });
   return res.data;
 }
 
 async function updateDashboard(id: number, payload: { name?: string; widgets?: DashboardWidgetDto[] }): Promise<DashboardDto> {
-  const res = await axios.put(`${DB_API_URL}/dashboards/${id}`, payload, { headers: createAuthHeaders() });
+  const res = await axios.put(`${BFF_DB_API_URL}/dashboards/${id}`, payload, { headers: createAuthHeaders() });
   return res.data;
 }
 
 async function deleteDashboard(id: number): Promise<void> {
-  await axios.delete(`${DB_API_URL}/dashboards/${id}`, { headers: createAuthHeaders() });
+  await axios.delete(`${BFF_DB_API_URL}/dashboards/${id}`, { headers: createAuthHeaders() });
 }
 
 const dashboardService = {

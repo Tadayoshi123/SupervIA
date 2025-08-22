@@ -93,7 +93,7 @@ function NotificationsBell() {
     } catch {}
   };
 
-  useEffect(() => {
+  useEffect(() => { 
     load();
   }, [open]);
 
@@ -176,7 +176,7 @@ function NotificationsBell() {
           </div>
           <div className="p-2 flex items-center justify-end gap-2 border-t">
             <button className="text-xs text-blue-600 hover:underline" onClick={() => { markAllAsRead(); }}>Marquer comme lus</button>
-            <button className="text-xs text-blue-600 hover:underline" onClick={() => { localStorage.removeItem('supervia.notifications'); setItems([]); }}>Effacer l'historique</button>
+            <button className="text-xs text-blue-600 hover:underline" onClick={() => { localStorage.removeItem('supervia.notifications'); setItems([]); }}>Effacer l&apos;historique</button>
           </div>
         </div>
       )}

@@ -21,7 +21,6 @@ import {
 import { restrictToWindowEdges } from '@dnd-kit/modifiers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import toast from 'react-hot-toast';
 import { ArrowLeft, Plus, Save, LayoutGrid, Eye, EyeOff, PanelRight } from 'lucide-react';
 import Link from 'next/link';
@@ -29,9 +28,6 @@ import DashboardGrid from '@/components/dashboard/DashboardGrid';
 import WidgetSelector from '@/components/dashboard/WidgetSelector';
 import WidgetComponent from '@/components/dashboard/WidgetComponent';
 import { Widget, WidgetType, WidgetConfig } from '@/types/dashboard';
-import Breadcrumbs from '@/components/layout/Breadcrumbs';
-import WidgetPropertiesPanel from '@/components/dashboard/WidgetPropertiesPanel';
-import EditorToolbar from '@/components/dashboard/EditorToolbar';
 import RightPanel from '@/components/dashboard/RightPanel';
 
 function DashboardEditorPageInner() {

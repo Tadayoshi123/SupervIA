@@ -62,7 +62,7 @@ export default function AppLayout({ children, requireAuth = true }: AppLayoutPro
           <div className="w-12 h-12 bg-tech-gradient rounded-xl flex items-center justify-center shadow-lg mx-auto mb-4">
             <span className="text-2xl font-bold text-white">S</span>
           </div>
-          <p className="text-lg text-foreground">Vérification de l'authentification...</p>
+            <p className="text-lg text-foreground">Vérification de l&apos;authentification...</p>
         </div>
       </div>
     );

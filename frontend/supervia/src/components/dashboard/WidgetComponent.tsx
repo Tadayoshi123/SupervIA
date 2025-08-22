@@ -5,7 +5,7 @@ import { selectItemsForHost, selectProblems, selectHosts } from '@/lib/features/
 import { Widget } from '@/types/dashboard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { X, AlertCircle, Gauge, CheckCircle, BarChart3, Activity, Hash, TrendingUp, PieChart } from 'lucide-react';
+import { X, AlertCircle, Gauge, CheckCircle, Activity, Hash, TrendingUp, PieChart } from 'lucide-react';
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { useEffect, useRef, useState } from 'react';
 import metricsService from '@/lib/features/metrics/metricsService';

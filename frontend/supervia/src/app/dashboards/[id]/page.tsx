@@ -6,11 +6,11 @@ import { useAppSelector } from '@/lib/hooks';
 import { selectIsAuthenticated } from '@/lib/features/auth/authSlice';
 import dashboardService, { DashboardDto } from '@/lib/features/dashboard/dashboardService';
 import Breadcrumbs from '@/components/layout/Breadcrumbs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import WidgetComponent from '@/components/dashboard/WidgetComponent';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Eye, EyeOff, Edit, LayoutGrid, Maximize, Minimize } from 'lucide-react';
+import { Eye, Edit, LayoutGrid, Maximize, Minimize } from 'lucide-react';
 import Link from 'next/link';
 import { Widget } from '@/types/dashboard';
 

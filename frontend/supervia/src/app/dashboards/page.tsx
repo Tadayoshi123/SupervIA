@@ -4,11 +4,11 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useAppSelector } from '@/lib/hooks';
 import { selectIsAuthenticated, selectUser } from '@/lib/features/auth/authSlice';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Breadcrumbs from '@/components/layout/Breadcrumbs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, BarChart3, Calendar, Settings, Trash2, Eye, Edit } from 'lucide-react';
+import { Plus, BarChart3, Calendar, Trash2, Eye, Edit } from 'lucide-react';
 import dashboardService, { DashboardDto } from '@/lib/features/dashboard/dashboardService';
 
 export default function DashboardsPage() {

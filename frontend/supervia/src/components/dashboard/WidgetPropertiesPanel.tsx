@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAppSelector } from '@/lib/hooks';
 import { selectHosts, selectItemsForHost } from '@/lib/features/metrics/metricsSlice';
 import { Widget } from '@/types/dashboard';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Settings, Type, Server, Palette, Clock, Eye, BarChart3, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Settings, Type, Server, Clock, Eye, BarChart3, ToggleLeft, ToggleRight } from 'lucide-react';
 
 type Props = {
   widget: Widget | null;
@@ -335,7 +335,7 @@ export default function WidgetPropertiesPanel({ widget, onChange }: Props) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Seuil d'alerte
+                  Seuil d&apos;alerte
                 </label>
                 <Input
                   type="number"

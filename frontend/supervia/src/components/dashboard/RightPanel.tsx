@@ -87,7 +87,7 @@ export default function RightPanel({ selectedWidget, onChange, onAddWidget }: Pr
       }
       const suggestion = await aiService.generateTitle(selectedWidget.type, items);
       const titleText = typeof suggestion === 'string' ? suggestion : suggestion.title;
-      setIaText(`Titre suggéré : "${titleText}"`);
+      setIaText(`Titre suggéré : &ldquo;${titleText}&rdquo;`);
       onChange({ title: titleText });
     } catch {
       setIaText('Impossible de générer un titre pour ce widget.');
@@ -100,7 +100,7 @@ export default function RightPanel({ selectedWidget, onChange, onAddWidget }: Pr
     setLoading(true);
     try {
       const summary = await aiService.summarize(problems.length, hostsStats.online, hostsStats.total);
-      setIaText(`Résumé de l'infrastructure :\n${summary}`);
+      setIaText(`Résumé de l&apos;infrastructure :\n${summary}`);
     } catch {
       setIaText('Impossible de générer un résumé.');
     } finally {
@@ -125,7 +125,7 @@ export default function RightPanel({ selectedWidget, onChange, onAddWidget }: Pr
         setIaText('Aucune anomalie détectée dans les données récentes.');
       }
     } catch {
-      setIaText('Impossible d\'analyser les anomalies pour cette métrique.');
+      setIaText('Impossible d&apos;analyser les anomalies pour cette métrique.');
     } finally {
       setLoading(false);
     }
@@ -271,7 +271,7 @@ export default function RightPanel({ selectedWidget, onChange, onAddWidget }: Pr
                   🤖 Assistant IA
                 </h3>
                 <p className="text-sm text-purple-700 dark:text-purple-300 mb-3">
-                  Utilisez l'IA pour optimiser et améliorer votre widget automatiquement.
+                  Utilisez l&apos;IA pour optimiser et améliorer votre widget automatiquement.
                 </p>
                 <div className="grid grid-cols-1 gap-2">
                   <Button 
@@ -334,7 +334,7 @@ export default function RightPanel({ selectedWidget, onChange, onAddWidget }: Pr
               {iaText && (
                 <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                   <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
-                    💬 Réponse de l'assistant
+                    💬 Réponse de l&apos;assistant
                   </h4>
                   <p className="text-sm text-blue-700 dark:text-blue-300 whitespace-pre-wrap">
                     {iaText}
@@ -347,7 +347,7 @@ export default function RightPanel({ selectedWidget, onChange, onAddWidget }: Pr
                   <div className="flex items-center gap-3">
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-cyan-600"></div>
                     <span className="text-sm text-gray-600 dark:text-gray-400">
-                      L'assistant IA travaille...
+                      L&apos;assistant IA travaille...
                     </span>
                   </div>
                 </div>
@@ -364,7 +364,7 @@ export default function RightPanel({ selectedWidget, onChange, onAddWidget }: Pr
                   🔔 Configuration des alertes
                 </h3>
                 <p className="text-sm text-orange-700 dark:text-orange-300">
-                  Configurez les notifications et seuils d'alerte pour ce widget.
+                  Configurez les notifications et seuils d&apos;alerte pour ce widget.
                 </p>
               </div>
 
@@ -423,7 +423,7 @@ export default function RightPanel({ selectedWidget, onChange, onAddWidget }: Pr
 
               {selectedWidget.type === 'metricValue' && (
                 <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <h4 className="font-medium text-gray-900 dark:text-gray-100">Règle d'alerte</h4>
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100">Règle d&apos;alerte</h4>
                   <div className="space-y-3">
                     <p className="text-xs text-muted-foreground">
                       Définissez une condition pour déclencher une alerte pour cette métrique.
@@ -468,7 +468,7 @@ export default function RightPanel({ selectedWidget, onChange, onAddWidget }: Pr
                   <div className="space-y-3">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Niveau minimal d'alerte
+                        Niveau minimal d&apos;alerte
                       </label>
                       <select 
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
@@ -490,7 +490,7 @@ export default function RightPanel({ selectedWidget, onChange, onAddWidget }: Pr
                     <p className="text-xs text-muted-foreground">Définissez des alertes pour des métriques spécifiques dans ce graphique.</p>
                     {(selectedWidget.config?.series as string[] || []).map(itemId => {
                       const rule = (selectedWidget.config?.alerts || []).find(a => a.targetItemId === itemId);
-                      if (rule) return null; // Pour l'instant, on ne gère que l'ajout
+                      if (rule) return null; // Pour l&apos;instant, on ne gère que l&apos;ajout
                       return (
                         <div key={itemId} className="flex items-center justify-between p-2 bg-white dark:bg-gray-700 rounded-md">
                           <span className="text-sm truncate">{itemLabelById[itemId] || `Item ${itemId}`}</span>
@@ -551,7 +551,7 @@ export default function RightPanel({ selectedWidget, onChange, onAddWidget }: Pr
                   <h4 className="font-medium text-gray-900 dark:text-gray-100">Événements de disponibilité</h4>
                   <div className="space-y-3">
                     <label className="flex items-center justify-between">
-                      <span className="text-sm text-gray-700 dark:text-gray-300">Notifier quand l'hôte devient indisponible</span>
+                      <span className="text-sm text-gray-700 dark:text-gray-300">Notifier quand l&apos;hôte devient indisponible</span>
                       <input 
                         type="checkbox" 
                         className="w-4 h-4 text-cyan-600 rounded focus:ring-cyan-500" 
@@ -560,7 +560,7 @@ export default function RightPanel({ selectedWidget, onChange, onAddWidget }: Pr
                       />
                     </label>
                     <label className="flex items-center justify-between">
-                      <span className="text-sm text-gray-700 dark:text-gray-300">Notifier quand l'hôte redevient disponible</span>
+                      <span className="text-sm text-gray-700 dark:text-gray-300">Notifier quand l&apos;hôte redevient disponible</span>
                       <input 
                         type="checkbox" 
                         className="w-4 h-4 text-cyan-600 rounded focus:ring-cyan-500" 
