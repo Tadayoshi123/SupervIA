@@ -108,17 +108,17 @@ router.get('/items/:hostid/top', authenticateRequest, getTopItemsForHost);
  *         name: from
  *         schema:
  *           type: integer
- *           description: Epoch seconds (défaut: now-3600)
+ *           description: "Epoch seconds (défaut: now-3600)"
  *       - in: query
  *         name: to
  *         schema:
  *           type: integer
- *           description: Epoch seconds (défaut: now)
+ *           description: "Epoch seconds (défaut: now)"
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
- *           description: Nombre max de points (défaut 500, max 2000)
+ *           description: "Nombre max de points (défaut 500, max 2000)"
  *     responses:
  *       200:
  *         description: Série temporelle normalisée [{clock, value}]

@@ -10,7 +10,7 @@ const swaggerDefinition = {
   },
   servers: [
     {
-      url: 'http://localhost:3003', // Port du metrics-service
+      url: process.env.METRICS_SERVICE_URL || 'http://localhost:3003', // Port du metrics-service
       description: 'Serveur de développement',
     },
   ],

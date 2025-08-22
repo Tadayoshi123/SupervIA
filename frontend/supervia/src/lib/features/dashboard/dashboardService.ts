@@ -1,7 +1,8 @@
 // src/lib/features/dashboard/dashboardService.ts
 import axios from 'axios';
 
-const DB_API_URL = process.env.NEXT_PUBLIC_DB_API_URL || 'http://localhost:3000/api';
+// Fallback dev: db-service exposé sur 3001 via docker-compose
+const DB_API_URL = process.env.NEXT_PUBLIC_DB_API_URL || 'http://localhost:3001/api';
 
 export type DashboardWidgetDto = {
   id?: number;

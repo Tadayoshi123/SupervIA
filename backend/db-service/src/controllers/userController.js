@@ -4,7 +4,17 @@ const prisma = require('./prisma');
 // Récupérer tous les utilisateurs
 const getAllUsers = async (req, res, next) => {
   try {
-    const users = await prisma.user.findMany();
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        emailVerified: true,
+        image: true,
+        createdAt: true,
+        updatedAt: true,
+      }
+    });
     res.status(200).json(users);
   } catch (error) {
     next(error);
@@ -59,6 +69,16 @@ const getUserByEmail = async (req, res, next) => {
     const { email } = req.params;
     const user = await prisma.user.findUnique({
       where: { email },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        emailVerified: true,
+        image: true,
+        createdAt: true,
+        updatedAt: true,
+        // Ne jamais exposer le mot de passe via endpoints publics
+      }
     });
 
     if (!user) {

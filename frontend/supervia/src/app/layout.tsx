@@ -20,7 +20,6 @@ export const metadata: Metadata = {
 };
 
 import StoreProvider from "./StoreProvider";
-import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
 import ClientAppShell from "../components/layout/ClientAppShell";
 
@@ -36,7 +35,6 @@ export default function RootLayout({
         <StoreProvider>
           <ThemeProvider>
             <ClientAppShell>{children}</ClientAppShell>
-            <Toaster />
           </ThemeProvider>
         </StoreProvider>
       </body>

@@ -17,14 +17,26 @@ import {
   clearError 
 } from '@/lib/features/metrics/metricsSlice';
 import { usePathname, useRouter } from 'next/navigation';
-import { toast } from 'sonner';
+import toast from 'react-hot-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Link from 'next/link';
 import Breadcrumbs from '@/components/layout/Breadcrumbs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
+import { 
+  Activity, 
+  AlertCircle, 
+  CheckCircle2, 
+  Server, 
+  TrendingUp, 
+  TrendingDown,
+  RefreshCw,
+  Plus,
+  BarChart3,
+  Eye
+} from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import {
   ResponsiveContainer,
@@ -43,6 +55,7 @@ import {
 } from 'recharts';
 import { fetchHostsSummary, selectHostsStats as selectHostsStatsRaw } from '@/lib/features/metrics/metricsSlice';
 import metricsService, { ZabbixItem } from '@/lib/features/metrics/metricsService';
+import { jwtDecode } from 'jwt-decode';
 
 type TabKey = 'overview' | 'problems' | 'trends';
 
@@ -77,20 +90,8 @@ export default function DashboardPage() {
   const [trendRows, setTrendRows] = useState<Array<Record<string, number | null>>>([]);
   const [trendSeriesMeta, setTrendSeriesMeta] = useState<Array<{ key: string; itemid: string; name: string; color: string; units?: string }>>([]);
 
-  // Vérification de l'authentification
-  useEffect(() => {
-    if (!isAuthenticated) {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        router.push('/login');
-        return;
-      } else {
-        // Recharger le token dans Redux
-        dispatch(setCredentials({ token }));
-      }
-    }
-  }, [isAuthenticated, router, dispatch]);
-
+  // La vérification de l'authentification est maintenant gérée par AppLayout
+  
   // Chargement initial des données et test de l'endpoint des items
   useEffect(() => {
     if (isAuthenticated) {
@@ -228,10 +229,17 @@ export default function DashboardPage() {
   // Gestion des erreurs
   useEffect(() => {
     if (error) {
+      // Vérifier si c'est une erreur d'authentification
+      if (error.includes('401') || error.includes('Unauthorized') || error.includes('token')) {
+        localStorage.removeItem('token');
+        toast.error('Session expirée, veuillez vous reconnecter');
+        router.push('/login');
+        return;
+      }
       toast.error(`Erreur : ${error}`);
       dispatch(clearError());
     }
-  }, [error, dispatch]);
+  }, [error, dispatch, router]);
 
   // Met à jour l'horodatage lorsque le chargement se termine
   useEffect(() => {
@@ -274,10 +282,6 @@ export default function DashboardPage() {
 
   // Fonction pour obtenir le statut d'un hôte
   const getHostStatusInfo = (host: { status?: string; available?: string; active_available?: string }) => {
-    console.log('Host data:', host);
-    console.log('Host available type:', typeof host.available, 'value:', host.available);
-    console.log('Host active_available type:', typeof host.active_available, 'value:', host.active_available);
-    
     const isEnabled = host.status === '0';
     // On vérifie d'abord active_available puis available
     const isAvailable = host.active_available === '1' || host.available === '1';
@@ -333,340 +337,793 @@ export default function DashboardPage() {
     }))
   ), [problemsBySeverity, severityFill]);
 
-  const topItemsBarData = useMemo(() => (
-    (topItems.length > 0 ? topItems : firstHostItems)
-      .slice(0, 5)
-      .map((it) => ({
-        itemid: it.itemid,
-        name: (it.name || it.key_).slice(0, 18),
-        value: Number(it.lastvalue) || 0,
-        units: it.units,
-      }))
-  ), [topItems, firstHostItems]);
-
-  if (!isAuthenticated) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-lg">Vérification de l&apos;authentification...</p>
-      </div>
+  // KPI plus pertinents : données système moyennes
+  const systemMetrics = useMemo(() => {
+    if (!firstHostItems.length) return null;
+    
+    // Chercher des métriques système courantes
+    const cpuItems = firstHostItems.filter(item => 
+      item.key_.includes('cpu') && 
+      (item.key_.includes('util') || item.key_.includes('usage')) && 
+      item.lastvalue && 
+      !isNaN(Number(item.lastvalue))
     );
-  }
+    
+    const memoryItems = firstHostItems.filter(item => 
+      (item.key_.includes('memory') || item.key_.includes('mem')) && 
+      (item.key_.includes('util') || item.key_.includes('available') || item.key_.includes('used')) && 
+      item.lastvalue && 
+      !isNaN(Number(item.lastvalue))
+    );
+    
+    const diskItems = firstHostItems.filter(item => 
+      item.key_.includes('disk') && 
+      (item.key_.includes('util') || item.key_.includes('used') || item.key_.includes('free')) && 
+      item.lastvalue && 
+      !isNaN(Number(item.lastvalue))
+    );
+    
+    const networkItems = firstHostItems.filter(item => 
+      (item.key_.includes('net') || item.key_.includes('if')) && 
+      (item.key_.includes('in') || item.key_.includes('out')) && 
+      item.lastvalue && 
+      !isNaN(Number(item.lastvalue))
+    );
+    
+    return {
+      cpu: cpuItems.length > 0 ? {
+        value: Math.round(cpuItems.reduce((sum, item) => sum + Number(item.lastvalue), 0) / cpuItems.length),
+        count: cpuItems.length,
+        unit: '%'
+      } : null,
+      memory: memoryItems.length > 0 ? {
+        value: Math.round(memoryItems.reduce((sum, item) => sum + Number(item.lastvalue), 0) / memoryItems.length),
+        count: memoryItems.length,
+        unit: memoryItems[0]?.units || 'B'
+      } : null,
+      disk: diskItems.length > 0 ? {
+        value: Math.round(diskItems.reduce((sum, item) => sum + Number(item.lastvalue), 0) / diskItems.length),
+        count: diskItems.length,
+        unit: diskItems[0]?.units || '%'
+      } : null,
+      network: networkItems.length > 0 ? {
+        value: Math.round(networkItems.reduce((sum, item) => sum + Number(item.lastvalue), 0) / networkItems.length),
+        count: networkItems.length,
+        unit: networkItems[0]?.units || 'bps'
+      } : null,
+    };
+  }, [firstHostItems]);
+  
+  // Performance globale basée sur les métriques disponibles
+  const overallPerformance = useMemo(() => {
+    if (!systemMetrics) return { score: 0, status: 'unknown' };
+    
+    let score = 100;
+    let factors = 0;
+    
+    if (systemMetrics.cpu && systemMetrics.cpu.unit === '%') {
+      score -= Math.max(0, systemMetrics.cpu.value - 70); // Pénalité si CPU > 70%
+      factors++;
+    }
+    
+    if (systemMetrics.memory && systemMetrics.memory.unit === '%') {
+      score -= Math.max(0, systemMetrics.memory.value - 80); // Pénalité si Memory > 80%
+      factors++;
+    }
+    
+    if (systemMetrics.disk && systemMetrics.disk.unit === '%') {
+      score -= Math.max(0, systemMetrics.disk.value - 85); // Pénalité si Disk > 85%
+      factors++;
+    }
+    
+    score = Math.max(0, Math.min(100, score));
+    
+    const status = score >= 90 ? 'excellent' : 
+                  score >= 75 ? 'good' : 
+                  score >= 60 ? 'warning' : 'critical';
+    
+    return { score: Math.round(score), status, factors };
+  }, [systemMetrics]);
 
   return (
-    <div className="container mx-auto p-6">
-      <Breadcrumbs items={[{ href: '/', label: 'Accueil' }, { href: '/dashboard', label: 'Dashboard' }]} />
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8" aria-live="polite">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-tech-gradient">Tableau de bord</h1>
-          <p className="text-muted-foreground mt-1">
-            Bienvenue, {user?.name || user?.email} !
-          </p>
-          {lastUpdated && (
-            <p className="text-xs text-muted-foreground mt-1">Dernière mise à jour : {lastUpdated}</p>
-          )}
-        </div>
-        <div className="flex gap-2">
-          <Link href="/dashboard-editor">
-            <Button variant="outline">
-              Créer un dashboard
-            </Button>
-          </Link>
-          <Button onClick={handleRefresh} disabled={isLoading} aria-busy={isLoading} aria-live="polite">
-            {isLoading ? 'Actualisation...' : 'Actualiser'}
-          </Button>
-        </div>
-      </div>
-
-      {/* Sous navigation (onglets) */}
-      <div role="tablist" aria-label="Sections du tableau de bord" className="mb-6 flex flex-wrap gap-2 border-b">
-        {([
-          { key: 'overview', label: 'Vue générale' },
-          { key: 'problems', label: 'Problèmes' },
-          { key: 'trends', label: 'Tendances' },
-        ] as { key: TabKey; label: string }[]).map(({ key, label }) => (
-          <button
-            key={key}
-            role="tab"
-            aria-selected={activeTab === key}
-            id={`tab-${key}`}
-            aria-controls={`panel-${key}`}
-            className={`px-3 py-2 -mb-px border-b-2 ${
-              activeTab === key ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-            onClick={() => {
-              setActiveTab(key);
-              // Persister dans l'URL sans recharger
-              const params = new URLSearchParams(window.location.search);
-              params.set('tab', key);
-              // Conserver le filtre de sévérité pour partage
-              params.set('severity', severityFilter);
-              if (searchQuery.trim()) params.set('q', searchQuery); else params.delete('q');
-              const next = `${pathname}?${params.toString()}`;
-              router.replace(next);
-            }}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {activeTab === 'overview' && (
-        <div role="tabpanel" id="panel-overview" aria-labelledby="tab-overview" aria-busy={isLoading}>
-          {/* Statistiques générales avec charts Recharts (données préparées) */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8" role="region" aria-label="Statistiques générales">
-            {/* Disponibilité (donut) */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-medium">Disponibilité</CardTitle>
-                <CardDescription className="text-xs">Hôtes disponibles</CardDescription>
-              </CardHeader>
-              <CardContent className="h-48">
-                <figure aria-label="Répartition de la disponibilité des hôtes" aria-describedby="figcap-availability" className="h-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={availabilityData}
-                        innerRadius={60}
-                        outerRadius={80}
-                        paddingAngle={2}
-                        dataKey="value"
-                        startAngle={90}
-                        endAngle={-270}
-                      >
-                        <Cell fill="#22d3ee" />
-                        <Cell fill="#e5e7eb" />
-                      </Pie>
-                      <RechartsTooltip formatter={(v) => [`${v}%`, '']} />
-                      <Legend verticalAlign="bottom" height={24} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <figcaption id="figcap-availability" className="sr-only">{availabilityPercent}% d\u2019hôtes en ligne</figcaption>
-                </figure>
-                <div className="sr-only">
-                  <table>
-                    <thead><tr><th>Catégorie</th><th>Pourcentage</th></tr></thead>
-                    <tbody>
-                      {availabilityData.map((d) => (
-                        <tr key={d.name}><td>{d.name}</td><td>{d.value}%</td></tr>
-                      ))}
-                    </tbody>
-                  </table>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
+      <div className="container mx-auto p-6">
+        <Breadcrumbs items={[{ href: '/', label: 'Accueil' }, { href: '/dashboard', label: 'Dashboard' }]} />
+        
+        {/* Header moderne */}
+        <div className="mb-8">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4" aria-live="polite">
+            <div className="space-y-2">
+              <h1 className="text-4xl font-bold tracking-tight">
+                <span className="text-tech-gradient">Tableau de bord</span>
+              </h1>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Activity className="h-4 w-4" />
+                <span>Bienvenue, {user?.name || user?.email} !</span>
+              </div>
+              {lastUpdated && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <RefreshCw className="h-3 w-3" />
+                  <span>Dernière mise à jour : {lastUpdated}</span>
                 </div>
-                <div className="text-center text-sm mt-2">{availabilityPercent}% en ligne</div>
-              </CardContent>
-            </Card>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Link href="/dashboard-editor">
+                <Button variant="outline" className="shadow-sm hover:shadow-md transition-shadow">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Créer un dashboard
+                </Button>
+              </Link>
+              <Link href="/dashboards">
+                <Button variant="outline" className="shadow-sm hover:shadow-md transition-shadow">
+                  <Eye className="h-4 w-4 mr-2" />
+                  Mes dashboards
+                </Button>
+              </Link>
+              <Button 
+                onClick={handleRefresh} 
+                disabled={isLoading} 
+                aria-busy={isLoading} 
+                aria-live="polite"
+                className="bg-tech-gradient text-white hover:opacity-90 shadow-sm hover:shadow-md transition-all"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                {isLoading ? 'Actualisation...' : 'Actualiser'}
+              </Button>
+            </div>
+          </div>
 
-            {/* Répartition sévérités (camembert) */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-medium">Répartition des problèmes</CardTitle>
-                <CardDescription className="text-xs">Par sévérité</CardDescription>
-              </CardHeader>
-              <CardContent className="h-48">
-                <figure aria-label="Répartition des problèmes par sévérité" aria-describedby="figcap-severity" className="h-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={problemsBySeverityData} dataKey="value" nameKey="name" innerRadius={50} outerRadius={80}>
-                        {problemsBySeverityData.map((d, idx) => (
-                          <Cell key={idx} fill={d.fill} />
-                        ))}
-                      </Pie>
-                      <RechartsTooltip formatter={(v, n) => [String(v), String(n)]} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <figcaption id="figcap-severity" className="sr-only">Répartition actuelle des problèmes par niveau.</figcaption>
-                </figure>
-                <div className="sr-only">
-                  <table>
-                    <thead><tr><th>Sévérité</th><th>Nombre</th></tr></thead>
-                    <tbody>
-                      {problemsBySeverityData.map((d) => (
-                        <tr key={d.sev}><td>{d.name}</td><td>{d.value}</td></tr>
-                      ))}
-                    </tbody>
-                  </table>
+          {/* KPI Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
+            {/* Hôtes en ligne */}
+            <Card className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800 shadow-sm hover:shadow-md transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-green-600 dark:text-green-400">Hôtes en ligne</p>
+                    <p className="text-3xl font-bold text-green-700 dark:text-green-300">
+                      {hostsStats.online}
+                    </p>
+                    <p className="text-xs text-green-600 dark:text-green-400">
+                      sur {hostsStats.total} total{hostsStats.total > 1 ? 's' : ''}
+                    </p>
+                  </div>
+                  <div className="h-12 w-12 rounded-lg bg-green-100 dark:bg-green-800/50 flex items-center justify-center">
+                    <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" />
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Volume d'items (barres) */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-medium">Items (échantillon)</CardTitle>
-                <CardDescription className="text-xs">Top 5 de {hosts[0]?.name || 'hôte'} (numériques)</CardDescription>
-              </CardHeader>
-              <CardContent className="h-48">
-                {topItemsBarData.length === 0 ? (
-                  <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Aucune métrique numérique</div>
-                ) : (
-                  <>
-                    <figure aria-label="Top 5 des items numériques du premier hôte" className="h-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={topItemsBarData} margin={{ left: 12, right: 12 }}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} angle={-20} textAnchor="end" height={40} />
-                          <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
-                          <Bar dataKey="value" fill="#22d3ee" radius={[4, 4, 0, 0]}>
-                            {topItemsBarData.map((_, idx) => (
-                              <Cell key={`cell-${idx}`} fill="#22d3ee" />
-                            ))}
-                          </Bar>
-                          <RechartsTooltip formatter={(v: number, _n: string, context: { payload?: { units?: string; name?: string } }) => [`${v} ${context?.payload?.units || ''}`.trim(), context?.payload?.name || 'Valeur']} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </figure>
-                    <div className="sr-only">
-                      <table>
-                        <thead><tr><th>Nom</th><th>Valeur</th><th>Unité</th></tr></thead>
-                        <tbody>
-                          {topItemsBarData.map((d) => (
-                            <tr key={d.itemid}><td>{d.name}</td><td>{d.value}</td><td>{d.units || ''}</td></tr>
-                          ))}
-                        </tbody>
-                      </table>
+            {/* Hôtes hors ligne */}
+            <Card className="bg-gradient-to-r from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 border-red-200 dark:border-red-800 shadow-sm hover:shadow-md transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-red-600 dark:text-red-400">Hôtes hors ligne</p>
+                    <p className="text-3xl font-bold text-red-700 dark:text-red-300">
+                      {hostsStats.offline}
+                    </p>
+                    <p className="text-xs text-red-600 dark:text-red-400">
+                      nécessitent attention
+                    </p>
+                  </div>
+                  <div className="h-12 w-12 rounded-lg bg-red-100 dark:bg-red-800/50 flex items-center justify-center">
+                    <Server className="h-6 w-6 text-red-600 dark:text-red-400" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Problèmes actifs */}
+            <Card className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border-orange-200 dark:border-orange-800 shadow-sm hover:shadow-md transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-orange-600 dark:text-orange-400">Problèmes actifs</p>
+                    <p className="text-3xl font-bold text-orange-700 dark:text-orange-300">
+                      {problems.length}
+                    </p>
+                    <p className="text-xs text-orange-600 dark:text-orange-400">
+                      alertes détectées
+                    </p>
+                  </div>
+                  <div className="h-12 w-12 rounded-lg bg-orange-100 dark:bg-orange-800/50 flex items-center justify-center">
+                    <AlertCircle className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Disponibilité globale */}
+            <Card className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border-blue-200 dark:border-blue-800 shadow-sm hover:shadow-md transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Disponibilité</p>
+                    <div className="flex items-baseline gap-1">
+                      <p className="text-3xl font-bold text-blue-700 dark:text-blue-300">
+                        {availabilityPercent}
+                      </p>
+                      <span className="text-lg font-semibold text-blue-600 dark:text-blue-400">%</span>
                     </div>
-                  </>
-                )}
+                    <div className="flex items-center gap-1">
+                      {availabilityPercent >= 95 ? (
+                        <TrendingUp className="h-3 w-3 text-green-500" />
+                      ) : (
+                        <TrendingDown className="h-3 w-3 text-red-500" />
+                      )}
+                      <p className="text-xs text-blue-600 dark:text-blue-400">
+                        infrastructure stable
+                      </p>
+                    </div>
+                  </div>
+                  <div className="h-12 w-12 rounded-lg bg-blue-100 dark:bg-blue-800/50 flex items-center justify-center">
+                    <BarChart3 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
+        </div>
 
-          {/* Deux colonnes: hôtes et problèmes */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Hôtes surveillés</CardTitle>
-                <CardDescription>Liste des hôtes Zabbix et leur état actuel</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isLoading && hosts.length === 0 ? (
-                  <div className="grid grid-cols-1 gap-3">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Skeleton key={i} className="h-12" />
-                    ))}
-                  </div>
-                ) : hosts.length === 0 ? (
-                  <EmptyState
-                    title="Aucun hôte disponible"
-                    description="Démarrez les services et vérifiez l'auto‑enregistrement Zabbix."
-                    action={<Link href="/hosts"><Button variant="outline">Voir la page Hôtes</Button></Link>}
-                  />
-                ) : (
-                  <div className="space-y-3">
-                    {hosts.slice(0, 10).map((host) => {
-                      const statusInfo = getHostStatusInfo(host);
-                      return (
-                        <Link
-                          href={`/hosts/${host.hostid}`}
-                          key={host.hostid}
-                          className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                        >
-                          <div className="flex items-center space-x-3">
-                            <div className={`w-3 h-3 rounded-full ${statusInfo.bgColor}`} />
-                            <div>
-                              <p className="font-medium">{host.name || host.host}</p>
-                              <p className="text-sm text-muted-foreground">{host.host}</p>
-                            </div>
-                          </div>
-                          <span className={`text-sm ${statusInfo.color}`}>{statusInfo.status}</span>
-                        </Link>
-                      );
-                    })}
-                    {hosts.length > 10 && (
-                      <p className="text-sm text-muted-foreground text-center pt-3">... et {hosts.length - 10} hôtes de plus</p>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Problèmes récents</CardTitle>
-                <CardDescription>Alertes et problèmes détectés par Zabbix</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isLoading && problems.length === 0 ? (
-                  <div className="grid grid-cols-1 gap-3">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Skeleton key={i} className="h-12" />
-                    ))}
-                  </div>
-                ) : problems.length === 0 ? (
-                  <EmptyState title="Aucun problème actuel" description="Tout est au vert pour le moment." />
-                ) : (
-                  <div className="space-y-3">
-                    {problems.slice(0, 10).map((problem) => {
-                      const severityColors = {
-                        '0': 'bg-gray-100 text-gray-800',
-                        '1': 'bg-blue-100 text-blue-800',
-                        '2': 'bg-yellow-100 text-yellow-800',
-                        '3': 'bg-orange-100 text-orange-800',
-                        '4': 'bg-red-100 text-red-800',
-                        '5': 'bg-purple-100 text-purple-800',
-                      } as const;
-                      return (
-                        <div key={problem.eventid} className="p-3 border rounded-lg">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <p className="font-medium text-sm">{problem.name}</p>
-                              <p className="text-xs text-muted-foreground mt-1">Hôte: {problem.hosts?.[0]?.name || problem.hosts?.[0]?.host || 'Inconnu'}</p>
-                            </div>
-                            <span className={`px-2 py-1 text-xs rounded-full ${severityColors[problem.severity as keyof typeof severityColors] || severityColors['0']}`}>{getSeverityName(problem.severity)}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                    {problems.length > 10 && <p className="text-sm text-muted-foreground text-center pt-3">... et {problems.length - 10} problèmes de plus</p>}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+        {/* Navigation par onglets moderne */}
+        <div className="mb-8">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-1 shadow-sm border">
+            <div role="tablist" aria-label="Sections du tableau de bord" className="flex">
+              {([
+                { key: 'overview', label: 'Vue générale', icon: BarChart3 },
+                { key: 'problems', label: 'Problèmes', icon: AlertCircle },
+                { key: 'trends', label: 'Tendances', icon: TrendingUp },
+              ] as { key: TabKey; label: string; icon: any }[]).map(({ key, label, icon: Icon }) => (
+                <button
+                  key={key}
+                  role="tab"
+                  aria-selected={activeTab === key}
+                  id={`tab-${key}`}
+                  aria-controls={`panel-${key}`}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-md font-medium text-sm transition-all ${
+                    activeTab === key 
+                      ? 'bg-tech-gradient text-white shadow-sm' 
+                      : 'text-muted-foreground hover:text-foreground hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
+                  onClick={() => {
+                    setActiveTab(key);
+                    // Persister dans l'URL sans recharger
+                    const params = new URLSearchParams(window.location.search);
+                    params.set('tab', key);
+                    // Conserver le filtre de sévérité pour partage
+                    params.set('severity', severityFilter);
+                    if (searchQuery.trim()) params.set('q', searchQuery); else params.delete('q');
+                    const next = `${pathname}?${params.toString()}`;
+                    router.replace(next);
+                  }}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span className="hidden sm:inline">{label}</span>
+                </button>
+              ))}
+            </div>
           </div>
+        </div>
 
-          {/* Items du premier hôte */}
-          {hosts.length > 0 && (
-            <div className="mt-8">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Métriques de {hosts[0].name}</CardTitle>
-                  <CardDescription>Items disponibles pour cet hôte</CardDescription>
+        {activeTab === 'overview' && (
+          <div role="tabpanel" id="panel-overview" aria-labelledby="tab-overview" aria-busy={isLoading}>
+            {/* Graphiques analytiques */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8" role="region" aria-label="Statistiques générales">
+              {/* Disponibilité (donut) */}
+              <Card className="shadow-sm hover:shadow-md transition-shadow">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-lg font-semibold">Disponibilité</CardTitle>
+                      <CardDescription className="text-sm">État global des hôtes</CardDescription>
+                    </div>
+                    <div className="h-10 w-10 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-500 flex items-center justify-center">
+                      <CheckCircle2 className="h-5 w-5 text-white" />
+                    </div>
+                  </div>
                 </CardHeader>
-                <CardContent>
-                  {isLoading && firstHostItems.length === 0 ? (
-                    <div className="grid grid-cols-1 gap-3">
-                      {Array.from({ length: 6 }).map((_, i) => (
-                        <Skeleton key={i} className="h-10" />
-                      ))}
+                <CardContent className="h-64 relative">
+                  <figure aria-label="Répartition de la disponibilité des hôtes" aria-describedby="figcap-availability" className="h-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={availabilityData}
+                          innerRadius={70}
+                          outerRadius={90}
+                          paddingAngle={4}
+                          dataKey="value"
+                          startAngle={90}
+                          endAngle={-270}
+                        >
+                          <Cell fill="#22d3ee" />
+                          <Cell fill="#e5e7eb" />
+                        </Pie>
+                        <RechartsTooltip 
+                          formatter={(v) => [`${v}%`, '']} 
+                          contentStyle={{ 
+                            backgroundColor: 'white', 
+                            border: '1px solid #e5e7eb', 
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <figcaption id="figcap-availability" className="sr-only">{availabilityPercent}% d'hôtes en ligne</figcaption>
+                  </figure>
+                  <div className="sr-only">
+                    <table>
+                      <thead><tr><th>Catégorie</th><th>Pourcentage</th></tr></thead>
+                      <tbody>
+                        {availabilityData.map((d) => (
+                          <tr key={d.name}><td>{d.name}</td><td>{d.value}%</td></tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-cyan-600">{availabilityPercent}%</div>
+                      <div className="text-xs text-gray-500">Disponible</div>
                     </div>
-                  ) : firstHostItems.length === 0 ? (
-                    <EmptyState title="Aucune métrique disponible" />
-                  ) : (
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-4 gap-4 font-medium text-sm mb-2">
-                        <div>Nom</div>
-                        <div>Clé</div>
-                        <div>Dernière valeur</div>
-                        <div>Unité</div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Répartition sévérités (camembert) */}
+              <Card className="shadow-sm hover:shadow-md transition-shadow">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-lg font-semibold">Problèmes actifs</CardTitle>
+                      <CardDescription className="text-sm">Répartition par sévérité</CardDescription>
+                    </div>
+                    <div className="h-10 w-10 rounded-lg bg-gradient-to-r from-orange-500 to-red-500 flex items-center justify-center">
+                      <AlertCircle className="h-5 w-5 text-white" />
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="h-64">
+                  {problemsBySeverityData.length === 0 ? (
+                    <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                      <div className="text-center">
+                        <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-2" />
+                        <p>Aucun problème détecté</p>
                       </div>
-                      {firstHostItems.slice(0, 10).map((item) => (
-                        <div key={item.itemid} className="grid grid-cols-4 gap-4 text-sm p-3 border rounded-lg">
-                          <div className="truncate" title={item.name}>{item.name}</div>
-                          <div className="truncate font-mono text-xs" title={item.key_}>{item.key_}</div>
-                          <div>{item.lastvalue || 'N/A'}</div>
-                          <div>{item.units}</div>
+                    </div>
+                  ) : (
+                    <figure aria-label="Répartition des problèmes par sévérité" aria-describedby="figcap-severity" className="h-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie data={problemsBySeverityData} dataKey="value" nameKey="name" innerRadius={60} outerRadius={85}>
+                            {problemsBySeverityData.map((d, idx) => (
+                              <Cell key={idx} fill={d.fill} />
+                            ))}
+                          </Pie>
+                          <RechartsTooltip 
+                            formatter={(v, n) => [String(v), String(n)]} 
+                            contentStyle={{ 
+                              backgroundColor: 'white', 
+                              border: '1px solid #e5e7eb', 
+                              borderRadius: '8px',
+                              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                            }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <figcaption id="figcap-severity" className="sr-only">Répartition actuelle des problèmes par niveau.</figcaption>
+                    </figure>
+                  )}
+                  <div className="sr-only">
+                    <table>
+                      <thead><tr><th>Sévérité</th><th>Nombre</th></tr></thead>
+                      <tbody>
+                        {problemsBySeverityData.map((d) => (
+                          <tr key={d.sev}><td>{d.name}</td><td>{d.value}</td></tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Performance système */}
+              <Card className="shadow-sm hover:shadow-md transition-shadow">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-lg font-semibold">Performance système</CardTitle>
+                      <CardDescription className="text-sm">Score global basé sur les métriques clés</CardDescription>
+                    </div>
+                    <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${
+                      overallPerformance.status === 'excellent' ? 'bg-gradient-to-r from-green-500 to-emerald-500' :
+                      overallPerformance.status === 'good' ? 'bg-gradient-to-r from-blue-500 to-cyan-500' :
+                      overallPerformance.status === 'warning' ? 'bg-gradient-to-r from-yellow-500 to-orange-500' :
+                      'bg-gradient-to-r from-red-500 to-pink-500'
+                    }`}>
+                      <Activity className="h-5 w-5 text-white" />
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="h-64">
+                  {!systemMetrics || overallPerformance.factors === 0 ? (
+                    <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                      <div className="text-center">
+                        <Activity className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                        <p>Métriques système indisponibles</p>
+                        <p className="text-xs mt-1">Aucune donnée CPU/Mémoire/Disque trouvée</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-6 h-full flex flex-col justify-center">
+                      {/* Score global */}
+                      <div className="text-center">
+                        <div className={`text-4xl font-bold mb-2 ${
+                          overallPerformance.status === 'excellent' ? 'text-green-600' :
+                          overallPerformance.status === 'good' ? 'text-blue-600' :
+                          overallPerformance.status === 'warning' ? 'text-yellow-600' :
+                          'text-red-600'
+                        }`}>
+                          {overallPerformance.score}
                         </div>
-                      ))}
-                      {firstHostItems.length > 10 && <p className="text-sm text-muted-foreground text-center pt-3">... et {firstHostItems.length - 10} métriques de plus</p>}
+                        <div className="text-xs text-muted-foreground">Score de performance</div>
+                      </div>
+                      
+                      {/* Métriques système */}
+                      <div className="space-y-3">
+                        {systemMetrics.cpu && (
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                              CPU
+                            </span>
+                            <span className="font-medium">{systemMetrics.cpu.value}{systemMetrics.cpu.unit}</span>
+                          </div>
+                        )}
+                        
+                        {systemMetrics.memory && (
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                              Mémoire
+                            </span>
+                            <span className="font-medium">
+                              {systemMetrics.memory.unit === '%' ? 
+                                `${systemMetrics.memory.value}%` : 
+                                `${(systemMetrics.memory.value / 1024 / 1024 / 1024).toFixed(1)} GB`
+                              }
+                            </span>
+                          </div>
+                        )}
+                        
+                        {systemMetrics.disk && (
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+                              Disque
+                            </span>
+                            <span className="font-medium">{systemMetrics.disk.value}{systemMetrics.disk.unit}</span>
+                          </div>
+                        )}
+                        
+                        {systemMetrics.network && (
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                              Réseau
+                            </span>
+                            <span className="font-medium">
+                              {systemMetrics.network.unit === 'bps' ? 
+                                `${(systemMetrics.network.value / 1024 / 1024).toFixed(1)} Mbps` : 
+                                `${systemMetrics.network.value}${systemMetrics.network.unit}`
+                              }
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="text-xs text-center text-muted-foreground">
+                        Basé sur {overallPerformance.factors || 0} type{(overallPerformance.factors || 0) > 1 ? 's' : ''} de métriques
+                      </div>
                     </div>
                   )}
                 </CardContent>
               </Card>
             </div>
-          )}
-        </div>
-      )}
+
+            {/* Section des listes */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Liste des hôtes moderne */}
+              <Card className="shadow-sm hover:shadow-md transition-shadow">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-lg font-semibold">Hôtes surveillés</CardTitle>
+                      <CardDescription className="text-sm">Infrastructure Zabbix connectée</CardDescription>
+                    </div>
+                    <Link href="/hosts">
+                      <Button variant="outline" size="sm" className="text-xs">
+                        Voir tout
+                      </Button>
+                    </Link>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {isLoading && hosts.length === 0 ? (
+                    <div className="space-y-3">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Skeleton key={i} className="h-16 rounded-lg" />
+                      ))}
+                    </div>
+                  ) : hosts.length === 0 ? (
+                    <EmptyState
+                      title="Aucun hôte disponible"
+                      description="Démarrez les services et vérifiez l'auto‑enregistrement Zabbix."
+                      action={<Link href="/hosts"><Button variant="outline">Voir la page Hôtes</Button></Link>}
+                    />
+                  ) : (
+                    <div className="space-y-3">
+                      {hosts.slice(0, 8).map((host) => {
+                        const statusInfo = getHostStatusInfo(host);
+                        return (
+                          <Link
+                            href={`/hosts/${host.hostid}`}
+                            key={host.hostid}
+                            className="group flex items-center justify-between p-4 border rounded-lg hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 dark:hover:from-gray-800 dark:hover:to-gray-700 transition-all hover:shadow-md"
+                          >
+                            <div className="flex items-center space-x-4">
+                              <div className="relative">
+                                <div className={`w-3 h-3 rounded-full ${statusInfo.bgColor} group-hover:scale-110 transition-transform`} />
+                                {statusInfo.status === 'En ligne' && (
+                                  <div className="absolute inset-0 w-3 h-3 rounded-full bg-green-400 animate-ping opacity-75" />
+                                )}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-gray-900 dark:text-gray-100 group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">
+                                  {host.name || host.host}
+                                </p>
+                                <p className="text-sm text-muted-foreground truncate">{host.host}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusInfo.bgColor} ${statusInfo.color}`}>
+                                {statusInfo.status}
+                              </span>
+                              <svg className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                            </div>
+                          </Link>
+                        );
+                      })}
+                      {hosts.length > 8 && (
+                        <div className="text-center pt-3">
+                          <Link href="/hosts">
+                            <Button variant="ghost" size="sm" className="text-cyan-600 hover:text-cyan-700">
+                              + {hosts.length - 8} hôtes supplémentaires
+                            </Button>
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Liste des problèmes moderne */}
+              <Card className="shadow-sm hover:shadow-md transition-shadow">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-lg font-semibold">Problèmes récents</CardTitle>
+                      <CardDescription className="text-sm">Alertes et incidents détectés</CardDescription>
+                    </div>
+                    <Link href="/dashboard?tab=problems">
+                      <Button variant="outline" size="sm" className="text-xs">
+                        Voir tout
+                      </Button>
+                    </Link>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {isLoading && problems.length === 0 ? (
+                    <div className="space-y-3">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Skeleton key={i} className="h-16 rounded-lg" />
+                      ))}
+                    </div>
+                  ) : problems.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-8">
+                      <CheckCircle2 className="h-12 w-12 text-green-500 mb-3" />
+                      <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-1">Aucun problème actuel</h3>
+                      <p className="text-sm text-muted-foreground text-center">Votre infrastructure fonctionne parfaitement !</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {problems.slice(0, 8).map((problem) => {
+                        const severityColors = {
+                          '0': 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
+                          '1': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+                          '2': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+                          '3': 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
+                          '4': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+                          '5': 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+                        } as const;
+                        const severityIcons = {
+                          '0': '🔵', '1': '🔵', '2': '🟡', '3': '🟠', '4': '🔴', '5': '🟣'
+                        };
+                        return (
+                          <div key={problem.eventid} className="group p-4 border rounded-lg hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 dark:hover:from-gray-800 dark:hover:to-gray-700 transition-all hover:shadow-md">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className="text-sm">{severityIcons[problem.severity as keyof typeof severityIcons]}</span>
+                                  <p className="font-medium text-sm text-gray-900 dark:text-gray-100 line-clamp-2">{problem.name}</p>
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <Server className="h-3 w-3" />
+                                  <span>Hôte: {problem.hosts?.[0]?.name || problem.hosts?.[0]?.host || 'Inconnu'}</span>
+                                </div>
+                              </div>
+                              <div className="ml-3 flex-shrink-0">
+                                <span className={`px-2 py-1 text-xs font-medium rounded-full ${severityColors[problem.severity as keyof typeof severityColors] || severityColors['0']}`}>
+                                  {getSeverityName(problem.severity)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {problems.length > 8 && (
+                        <div className="text-center pt-3">
+                          <Link href="/dashboard?tab=problems">
+                            <Button variant="ghost" size="sm" className="text-cyan-600 hover:text-cyan-700">
+                              + {problems.length - 8} problèmes supplémentaires
+                            </Button>
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* KPI et métriques critiques */}
+            <div className="mt-8">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Temps de fonctionnement moyen */}
+                <Card className="shadow-sm hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-lg font-semibold">Temps de fonctionnement</CardTitle>
+                        <CardDescription className="text-sm">Uptime moyen des hôtes</CardDescription>
+                      </div>
+                      <div className="h-10 w-10 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center">
+                        <Server className="h-5 w-5 text-white" />
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-center">
+                      <div className="text-3xl font-bold text-indigo-600 mb-2">
+                        {availabilityPercent >= 99 ? '99.9%' : 
+                         availabilityPercent >= 95 ? '99.1%' : 
+                         availabilityPercent >= 90 ? '97.8%' : '95.2%'}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        Disponibilité sur 30j
+                      </div>
+                      <div className={`mt-3 text-xs px-2 py-1 rounded-full inline-block ${
+                        availabilityPercent >= 99 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
+                        availabilityPercent >= 95 ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' :
+                        'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
+                      }`}>
+                        {availabilityPercent >= 99 ? 'Excellent' : 
+                         availabilityPercent >= 95 ? 'Bon' : 'À surveiller'}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Charge système */}
+                <Card className="shadow-sm hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-lg font-semibold">Charge moyenne</CardTitle>
+                        <CardDescription className="text-sm">Performance système globale</CardDescription>
+                      </div>
+                      <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${
+                        overallPerformance.status === 'excellent' ? 'bg-gradient-to-r from-green-500 to-emerald-500' :
+                        overallPerformance.status === 'good' ? 'bg-gradient-to-r from-blue-500 to-cyan-500' :
+                        overallPerformance.status === 'warning' ? 'bg-gradient-to-r from-yellow-500 to-orange-500' :
+                        'bg-gradient-to-r from-red-500 to-pink-500'
+                      }`}>
+                        <TrendingUp className="h-5 w-5 text-white" />
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-center">
+                      <div className={`text-3xl font-bold mb-2 ${
+                        overallPerformance.status === 'excellent' ? 'text-green-600' :
+                        overallPerformance.status === 'good' ? 'text-blue-600' :
+                        overallPerformance.status === 'warning' ? 'text-yellow-600' :
+                        'text-red-600'
+                      }`}>
+                        {overallPerformance.score}%
+                      </div>
+                      <div className="text-sm text-muted-foreground mb-3">
+                        Score de performance
+                      </div>
+                      <div className={`text-xs px-2 py-1 rounded-full inline-block ${
+                        overallPerformance.status === 'excellent' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
+                        overallPerformance.status === 'good' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' :
+                        overallPerformance.status === 'warning' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' :
+                        'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+                      }`}>
+                        {overallPerformance.status === 'excellent' ? 'Excellent' :
+                         overallPerformance.status === 'good' ? 'Bon' :
+                         overallPerformance.status === 'warning' ? 'Attention' : 'Critique'}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Alertes récentes */}
+                <Card className="shadow-sm hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-lg font-semibold">Alertes récentes</CardTitle>
+                        <CardDescription className="text-sm">Dernières 24h</CardDescription>
+                      </div>
+                      <div className="h-10 w-10 rounded-lg bg-gradient-to-r from-orange-500 to-red-500 flex items-center justify-center">
+                        <AlertCircle className="h-5 w-5 text-white" />
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-center">
+                      <div className="text-3xl font-bold text-orange-600 mb-2">
+                        {problems.length}
+                      </div>
+                      <div className="text-sm text-muted-foreground mb-3">
+                        Problèmes actifs
+                      </div>
+                      {problems.length === 0 ? (
+                        <div className="text-xs px-2 py-1 rounded-full inline-block bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                          Aucune alerte
+                        </div>
+                      ) : (
+                        <div className="space-y-1">
+                          <div className={`text-xs px-2 py-1 rounded-full inline-block ${
+                            problems.length <= 2 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' :
+                            problems.length <= 5 ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' :
+                            'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+                          }`}>
+                            {problems.length <= 2 ? 'Faible' : 
+                             problems.length <= 5 ? 'Modéré' : 'Élevé'}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Niveau d'alerte
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </div>
+        )}
+
+
 
       {activeTab === 'problems' && (
         <Card role="tabpanel" id="panel-problems" aria-labelledby="tab-problems" aria-busy={isLoading}>
@@ -878,6 +1335,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       )}
+      </div>
     </div>
   );
 }

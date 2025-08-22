@@ -1,22 +1,37 @@
 'use client';
 
-import { useState } from 'react';
-import AppHeader from './AppHeader';
-import AppSidebar from './AppSidebar';
+import { usePathname } from 'next/navigation';
+import PublicLayout from './PublicLayout';
+import AppLayout from './AppLayout';
+
+// Pages publiques qui ne nécessitent pas d'authentification
+const publicRoutes = ['/', '/login', '/register', '/auth/callback'];
+
+// Pages qui nécessitent une authentification
+const protectedRoutes = ['/dashboard', '/hosts', '/dashboard-editor', '/dashboards'];
 
 export default function ClientAppShell({ children }: { children: React.ReactNode }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  return (
-    <div className="min-h-screen w-full">
-      <a href="#main" className="skip-link">Aller au contenu principal</a>
-      <AppHeader onOpenSidebar={() => setSidebarOpen(true)} />
-      <div className="flex">
-        <AppSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        {/* Laisse de la place à gauche pour la sidebar et ajoute un padding-top pour le header */}
-        <main id="main" tabIndex={-1} className="flex-1 container mx-auto px-4 py-6 pt-4 md:pt-6">{children}</main>
-      </div>
-    </div>
-  );
+  const pathname = usePathname();
+  
+  // Détermine si c'est une page publique
+  const isPublicPage = publicRoutes.includes(pathname) || 
+                       pathname.startsWith('/auth/');
+  
+  // Détermine si c'est une page protégée
+  const isProtectedPage = protectedRoutes.some(route => pathname.startsWith(route));
+  
+  // Pour les pages publiques, utilise le layout public
+  if (isPublicPage) {
+    return <PublicLayout>{children}</PublicLayout>;
+  }
+  
+  // Pour les pages protégées, utilise le layout applicatif avec protection
+  if (isProtectedPage) {
+    return <AppLayout requireAuth={true}>{children}</AppLayout>;
+  }
+  
+  // Par défaut, utilise le layout applicatif sans protection stricte
+  return <AppLayout requireAuth={false}>{children}</AppLayout>;
 }
 
 

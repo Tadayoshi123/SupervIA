@@ -5,7 +5,7 @@ import { useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAppDispatch } from '@/lib/hooks';
 import { setCredentials } from '@/lib/features/auth/authSlice';
-import { toast } from 'sonner';
+import toast from 'react-hot-toast';
 
 function AuthCallback() {
   const router = useRouter();

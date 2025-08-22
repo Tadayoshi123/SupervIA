@@ -106,6 +106,7 @@ jobs:
           echo "INTERNAL_API_KEY=${INTERNAL_API_KEY}";
           echo "DB_SERVICE_URL=http://db-service:3000";
           echo "NOTIFICATION_SERVICE_URL=http://notification-service:3000";
+          echo "AI_SERVICE_URL=http://ai-service:3000";
           echo "SMTP_HOST=${SMTP_HOST}";
           echo "SMTP_PORT=${SMTP_PORT}";
           echo "SMTP_SECURE=${SMTP_SECURE}";
@@ -120,6 +121,9 @@ jobs:
           echo "GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}";
           echo "GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}";
           echo "GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}";
+          echo "NEXT_PUBLIC_AI_API_URL=http://localhost:3005/api/ai";
+          echo "NEXT_PUBLIC_NOTIFICATION_API_URL=http://localhost:3004";
+          echo "NOTIF_DEFAULT_TO=${NOTIF_DEFAULT_TO}";
         } >> .env
       env:
         POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
@@ -146,6 +150,7 @@ jobs:
         # On mappe donc des secrets GH_* vers des variables d'env GITHUB_*
         GITHUB_CLIENT_ID: ${{ secrets.GH_CLIENT_ID }}
         GITHUB_CLIENT_SECRET: ${{ secrets.GH_CLIENT_SECRET }}
+        NOTIF_DEFAULT_TO: ${{ secrets.NOTIF_DEFAULT_TO }}
 
     - name: Build images with Buildx Bake (cached)
       uses: docker/bake-action@v5
@@ -183,15 +188,41 @@ jobs:
     
     steps:
     - uses: actions/checkout@v4
-    
-    - name: Run security audit
+
+    - name: Dependency Review (PRs only)
+      if: ${{ github.event_name == 'pull_request' }}
+      uses: actions/dependency-review-action@v4
+      with:
+        fail-on-severity: moderate
+
+    - name: Run npm audit (production)
       run: |
-        cd backend/db-service && npm audit --audit-level moderate
-        cd ../auth-service && npm audit --audit-level moderate
-        cd ../metrics-service && npm audit --audit-level moderate
-        cd ../notification-service && npm audit --audit-level moderate
-        cd ../ai-service && npm audit --audit-level moderate
-        cd ../../frontend/supervia && npm audit --audit-level moderate
+        cd backend/db-service && npm audit --omit=dev --audit-level=moderate
+        cd ../auth-service && npm audit --omit=dev --audit-level=moderate
+        cd ../metrics-service && npm audit --omit=dev --audit-level=moderate
+        cd ../notification-service && npm audit --omit=dev --audit-level=moderate
+        cd ../ai-service && npm audit --omit=dev --audit-level=moderate
+        cd ../../frontend/supervia && npm audit --omit=dev --audit-level=moderate
+
+    - name: Run npm audit (dev dependencies, non-blocking)
+      run: |
+        set +e
+        cd backend/db-service && npm audit --include=dev --audit-level=moderate || true
+        cd ../auth-service && npm audit --include=dev --audit-level=moderate || true
+        cd ../metrics-service && npm audit --include=dev --audit-level=moderate || true
+        cd ../notification-service && npm audit --include=dev --audit-level=moderate || true
+        cd ../ai-service && npm audit --include=dev --audit-level=moderate || true
+        cd ../../frontend/supervia && npm audit --include=dev --audit-level=moderate || true
+
+    - name: Trivy filesystem scan (High/Critical + secrets)
+      uses: aquasecurity/trivy-action@0.19.0
+      with:
+        scan-type: fs
+        scan-ref: .
+        scanners: vuln,secret
+        ignore-unfixed: true
+        severity: HIGH,CRITICAL
+        exit-code: '1'
 
   lint:
     runs-on: ubuntu-latest

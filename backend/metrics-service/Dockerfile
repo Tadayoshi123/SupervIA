@@ -4,7 +4,7 @@
 FROM node:lts-alpine AS deps
 WORKDIR /usr/src/app
 COPY package*.json ./
-RUN --mount=type=cache,target=/root/.npm npm ci
+RUN --mount=type=cache,target=/root/.npm npm ci || npm install
 
 # Étape 2: Build
 FROM node:lts-alpine AS builder

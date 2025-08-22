@@ -1,0 +1,186 @@
+const logger = require('../logger');
+
+// Helpers stats
+function mean(values) {
+  if (!values.length) return 0;
+  return values.reduce((a, b) => a + b, 0) / values.length;
+}
+function stddev(values) {
+  const m = mean(values);
+  const variance = mean(values.map(v => (v - m) ** 2));
+  return Math.sqrt(variance);
+}
+function percentile(values, p) {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const idx = Math.floor((p / 100) * (sorted.length - 1));
+  return sorted[idx];
+}
+
+// Controllers
+async function suggestWidgets(req, res, next) {
+  try {
+    const { hostId, items = [] } = req.body || {};
+
+    // items attendus (facultatif): [{ itemid, name, key_, value_type, units, lastvalue }]
+    const asNumber = (v) => {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : 0;
+    };
+    const isNumeric = (it) => it && (it.value_type === '0' || it.value_type === '3');
+    const prefersPercent = (it) => (it?.units || '').includes('%');
+    const matches = (name, substr) => (name || '').toLowerCase().includes(substr);
+
+    const numericItems = items.filter(isNumeric);
+    const sortedByValueDesc = [...numericItems].sort((a, b) => asNumber(b.lastvalue) - asNumber(a.lastvalue));
+
+    // Heuristiques de sélection
+    const cpuItem = sortedByValueDesc.find((it) => prefersPercent(it) || matches(it.name, 'cpu') || matches(it.name, 'util')); // utilisation CPU/percent
+    const memItem = sortedByValueDesc.find((it) => matches(it.name, 'mem') || matches(it.name, 'memory'));
+    const diskItem = sortedByValueDesc.find((it) => matches(it.name, 'disk') || matches(it.name, 'i/o') || matches(it.name, 'io'));
+
+    const availabilityItem = (items || []).find((it) => matches(it.key_, 'icmpping') || matches(it.key_, 'agent.ping') || matches(it.key_, 'availability'));
+
+    // Suggestions dynamiques par type
+    const suggestions = [];
+
+    // 1) MultiChart: jusqu'à 3 métriques pertinentes
+    const multiSeries = [cpuItem, memItem, diskItem, ...sortedByValueDesc].filter(Boolean)
+      .filter((it, idx, arr) => arr.findIndex((x) => x.itemid === it.itemid) === idx)
+      .slice(0, 3)
+      .map((it) => it.itemid);
+    if (multiSeries.length >= 2) {
+      const title = `Comparatif: ${multiSeries.length} métriques`;
+      suggestions.push({
+        type: 'multiChart',
+        title,
+        hostId,
+        config: { chartType: 'area', legend: true, showGrid: true, series: multiSeries }
+      });
+    }
+
+    // 2) Gauge: privilégie un pourcentage élevé (CPU, utilisation, etc.)
+    const gaugeItem = cpuItem || sortedByValueDesc[0];
+    if (gaugeItem) {
+      suggestions.push({
+        type: 'gauge',
+        title: `Jauge: ${gaugeItem.name || 'Métrique'}`,
+        hostId,
+        itemId: gaugeItem.itemid,
+        config: { warningThreshold: 70, criticalThreshold: 90 }
+      });
+    }
+
+    // 3) Disponibilité
+    if (availabilityItem) {
+      suggestions.push({
+        type: 'availability',
+        title: 'Disponibilité hôte',
+        hostId,
+        itemId: availabilityItem.itemid,
+        config: {}
+      });
+    }
+
+    // 4) Valeur simple: choisit une autre métrique non utilisée
+    const used = new Set([
+      ...multiSeries,
+      ...(gaugeItem ? [gaugeItem.itemid] : []),
+      ...(availabilityItem ? [availabilityItem.itemid] : []),
+    ]);
+    const valueItem = sortedByValueDesc.find((it) => !used.has(it.itemid));
+    if (valueItem) {
+      suggestions.push({
+        type: 'metricValue',
+        title: valueItem.name || 'Valeur',
+        hostId,
+        itemId: valueItem.itemid,
+        config: {}
+      });
+    }
+
+    // Fallback si rien
+    if (suggestions.length === 0) {
+      suggestions.push({ type: 'multiChart', title: 'Comparatif de métriques', hostId, config: { chartType: 'area', series: [] } });
+    }
+
+    res.json(suggestions);
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function thresholds(req, res, next) {
+  try {
+    const { values } = req.body; // tableau de valeurs numériques
+    const warn = percentile(values, 80);
+    const crit = percentile(values, 95);
+    res.json({ warning: warn, critical: crit });
+  } catch (err) { next(err); }
+}
+
+async function anomaly(req, res, next) {
+  try {
+    const { series } = req.body; // [{ts,value}]
+    const vals = series.map(p => Number(p.value || 0));
+    const m = mean(vals); const s = stddev(vals) || 1;
+    const anomalies = series.filter(p => Math.abs((p.value - m) / s) > 3);
+    res.json({ anomalies });
+  } catch (err) { next(err); }
+}
+
+async function predict(req, res, next) {
+  try {
+    const { series, horizon = 5 } = req.body; // OLS simple
+    const xs = series.map((_, i) => i);
+    const ys = series.map(p => Number(p.value || 0));
+    const n = xs.length;
+    const sumX = xs.reduce((a, b) => a + b, 0);
+    const sumY = ys.reduce((a, b) => a + b, 0);
+    const sumXY = xs.reduce((acc, x, i) => acc + x * ys[i], 0);
+    const sumX2 = xs.reduce((acc, x) => acc + x * x, 0);
+    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX || 1);
+    const intercept = (sumY - slope * sumX) / n;
+    const forecast = Array.from({ length: horizon }).map((_, k) => ({ index: n + k, value: intercept + slope * (n + k) }));
+    res.json({ slope, forecast });
+  } catch (err) { next(err); }
+}
+
+const { callChatLLM } = require('./llmClient');
+
+async function summarize(req, res, next) {
+  try {
+    const { problemsCount = 0, hostsOnline = 0, hostsTotal = 0 } = req.body || {};
+    // Si LLM dispo → demande un résumé court, sinon fallback local
+    let text = `Résumé: ${problemsCount} problème(s). Hôtes en ligne: ${hostsOnline}/${hostsTotal}.`;
+    try {
+      const system = 'Tu es un assistant qui explique brièvement l’état d’une plateforme de supervision.';
+      const user = `Fais un résumé concis et actionnable. Problèmes: ${problemsCount}. Hôtes en ligne: ${hostsOnline}/${hostsTotal}.`;
+      const out = await callChatLLM({ system, user, temperature: 0.2 });
+      if (out.text) text = out.text.trim();
+    } catch (e) {
+      // fallback silencieux
+    }
+    res.json({ text });
+  } catch (err) { next(err); }
+}
+
+async function generateTitle(req, res, next) {
+  try {
+    const { type, items = [] } = req.body || {};
+    const base = type === 'multiChart' ? 'Comparatif de métriques' : type === 'gauge' ? 'Jauge' : type === 'availability' ? 'Disponibilité' : 'Valeur de métrique';
+    let title = `${base}`;
+    try {
+      const itemNames = items.slice(0, 3).map(i => i?.name).filter(Boolean).join(', ');
+      const system = 'Tu proposes un titre court et clair pour un widget de dashboard (français).';
+      const user = `Type: ${type}. Items: ${itemNames}. Donne un titre court sans ponctuation excessive.`;
+      const out = await callChatLLM({ system, user, temperature: 0.4 });
+      if (out.text) title = out.text.replace(/\n/g, ' ').trim();
+    } catch {}
+    res.json({ title });
+  } catch (err) { next(err); }
+}
+
+module.exports = { suggestWidgets, thresholds, anomaly, predict, summarize, generateTitle };
+
+

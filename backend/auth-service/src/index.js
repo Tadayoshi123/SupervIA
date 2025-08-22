@@ -9,6 +9,7 @@ const passport = require('passport');
 const swaggerSpec = require('./config/swagger');
 const logger = require('./config/logger');
 const errorHandler = require('./middleware/errorHandler');
+const rateLimit = require('express-rate-limit');
 require('./config/passport'); // Important: Cela exécute le code de configuration de Passport
 
 dotenv.config();
@@ -17,9 +18,23 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // Middlewares de base
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true,
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 app.use(helmet());
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
+
+// Rate limiting basique pour auth (anti brute-force)
+const authLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 30,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+});
+app.use('/auth', authLimiter);
 
 // Configuration de la session express - requis pour Passport OAuth
 // Note: Pour la production, utilisez un store de session plus robuste (ex: connect-redis)
@@ -28,9 +43,11 @@ app.use(
     secret: process.env.SESSION_SECRET || 'super-secret-key-pour-le-dev', // Fallback pour le développement
     resave: false,
     saveUninitialized: false, // Ne pas créer de session avant l'authentification
-    cookie: { 
+    cookie: {
       secure: process.env.NODE_ENV === 'production', // Mettre `true` en production (HTTPS)
       httpOnly: true,
+      sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'lax',
+      maxAge: 1000 * 60 * 60,
     },
   })
 );

@@ -183,22 +183,7 @@ export const selectLastFetch = (state: RootState) => state.metrics.lastFetch;
 export const selectHostsStats = (state: RootState) => {
   const hosts = state.metrics.hosts;
   const total = hosts.length;
-  
-  console.log('Hosts in selectHostsStats:', hosts);
-  if (hosts.length > 0) {
-    console.log('First host available:', hosts[0].available, 'type:', typeof hosts[0].available);
-    console.log('First host active_available:', hosts[0].active_available, 'type:', typeof hosts[0].active_available);
-    
-    // Affichons toutes les propriétés du premier hôte pour déboguer
-    console.log('First host all properties:', Object.keys(hosts[0]));
-  }
-  
-  const online = hosts.filter(host => {
-    // On vérifie d'abord active_available puis available
-    const isOnline = host.active_available === '1' || host.available === '1';
-    console.log(`Host ${host.name} active_available: ${host.active_available}, available: ${host.available}, isOnline: ${isOnline}`);
-    return isOnline;
-  }).length;
+  const online = hosts.filter(host => host.active_available === '1' || host.available === '1').length;
   const offline = total - online;
   
   return { total, online, offline };

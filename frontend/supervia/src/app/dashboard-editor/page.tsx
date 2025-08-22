@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useRouter } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import { selectIsAuthenticated, setCredentials, selectUser } from '@/lib/features/auth/authSlice';
@@ -21,17 +22,21 @@ import { restrictToWindowEdges } from '@dnd-kit/modifiers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { toast } from 'sonner';
-import { ArrowLeft, Plus, Save } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { ArrowLeft, Plus, Save, LayoutGrid, Eye, EyeOff, PanelRight } from 'lucide-react';
 import Link from 'next/link';
 import DashboardGrid from '@/components/dashboard/DashboardGrid';
 import WidgetSelector from '@/components/dashboard/WidgetSelector';
 import WidgetComponent from '@/components/dashboard/WidgetComponent';
-import { Widget, WidgetType } from '@/types/dashboard';
+import { Widget, WidgetType, WidgetConfig } from '@/types/dashboard';
 import Breadcrumbs from '@/components/layout/Breadcrumbs';
+import WidgetPropertiesPanel from '@/components/dashboard/WidgetPropertiesPanel';
+import EditorToolbar from '@/components/dashboard/EditorToolbar';
+import RightPanel from '@/components/dashboard/RightPanel';
 
-export default function DashboardEditorPage() {
+function DashboardEditorPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
   const currentUser = useAppSelector(selectUser);
@@ -44,9 +49,65 @@ export default function DashboardEditorPage() {
   const [dashboardName, setDashboardName] = useState('Mon dashboard');
   const [selectedWidgetId, setSelectedWidgetId] = useState<string | null>(null);
   const editorRef = useRef<HTMLDivElement | null>(null);
-  const [gridCols, setGridCols] = useState<number>(12);
+  const [isPreviewMode, setIsPreviewMode] = useState<boolean>(false);
+  const [density, setDensity] = useState<'compact'|'spacious'>('spacious');
+  
+  // Grille adaptative selon le mode d'affichage
+  const gridCols = useMemo(() => {
+    if (isPreviewMode) {
+      return density === 'spacious' ? 8 : 12; // Moins de colonnes en Large pour éviter superposition
+    } else {
+      return 12; // Mode édition garde 12 colonnes
+    }
+  }, [isPreviewMode, density]);
+  
   const [gridRows, setGridRows] = useState<number>(20);
-  const gridSize = 64; // cellules plus grandes pour éviter la troncature
+  // Taille de grille adaptative selon le mode et la densité
+  const gridSize = useMemo(() => {
+    if (isPreviewMode) {
+      return density === 'spacious' ? 120 : 90;
+    } else {
+      return density === 'spacious' ? 64 : 54;
+    }
+  }, [isPreviewMode, density]);
+  const [showRightPanel, setShowRightPanel] = useState<boolean>(true);
+
+  // Widgets transformés selon le mode d'affichage
+  const transformedWidgets = useMemo(() => {
+    return widgets.map(widget => {
+      if (!isPreviewMode) {
+        // Mode édition : utiliser les positions originales
+        return widget;
+      }
+      
+      // Calculer la position en grille (colonnes/lignes) basée sur la taille d'édition
+      const baseGridSize = 64;
+      const gridCol = Math.round(widget.x / baseGridSize);
+      const gridRow = Math.round(widget.y / baseGridSize);
+      
+      // Recalculer la position en pixels selon le nouveau gridSize
+      const newX = gridCol * gridSize;
+      const newY = gridRow * gridSize;
+      
+      // Ajuster les dimensions selon le mode
+      let newWidth = widget.width;
+      let newHeight = widget.height;
+      
+      if (density === 'spacious') {
+        // En mode Large, widgets plus larges et mieux espacés
+        newWidth = Math.max(2, Math.min(widget.width + 1, 4));
+        newHeight = Math.max(2, Math.min(widget.height, 3));
+      }
+      
+      return {
+        ...widget,
+        x: newX,
+        y: newY,
+        width: newWidth,
+        height: newHeight
+      };
+    });
+  }, [widgets, gridSize, isPreviewMode, density]);
   
   // Configuration des capteurs pour le drag & drop
   const sensors = useSensors(
@@ -101,8 +162,8 @@ export default function DashboardEditorPage() {
   // Fonction pour trouver la prochaine position libre
   const findNextFreePosition = (): { x: number; y: number } => {
     const GRID_COLS = gridCols;
-    const WIDGET_WIDTH = 4;
-    const WIDGET_HEIGHT = 4;
+    const WIDGET_WIDTH = isPreviewMode && density === 'spacious' ? 2 : 4; // Widgets plus larges en mode Large
+    const WIDGET_HEIGHT = isPreviewMode && density === 'spacious' ? 3 : 4;
     
     for (let row = 0; row < Math.max(20, gridRows); row++) {
       for (let col = 0; col < GRID_COLS - WIDGET_WIDTH + 1; col++) {
@@ -131,17 +192,53 @@ export default function DashboardEditorPage() {
 
   // Restaurer depuis localStorage
   useEffect(() => {
-    const saved = localStorage.getItem('dashboard.widgets');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved) as Widget[];
-        setWidgets(parsed);
-        setNextId(parsed.length + 1);
-      } catch {}
+    const idParam = searchParams.get('dashboardId');
+    if (idParam && currentUser?.id) {
+      // Charger depuis l'API
+      (async () => {
+        try {
+          const svc = (await import('@/lib/features/dashboard/dashboardService')).default;
+          const dash = await svc.getDashboard(Number(idParam));
+          setDashboardName(dash.name);
+          const mapped: Widget[] = dash.widgets.map((w, idx) => ({
+            id: `widget-${idx + 1}`,
+            type: w.type as WidgetType,
+            title: w.title,
+            x: w.x,
+            y: w.y,
+            width: w.width,
+            height: w.height,
+            hostId: w.hostId || undefined,
+            itemId: w.itemId || undefined,
+            config: (w.config || undefined) as WidgetConfig | undefined,
+          }));
+          setWidgets(mapped);
+          setNextId(mapped.length + 1);
+        } catch {
+          // fallback local
+          const saved = localStorage.getItem('dashboard.widgets');
+          if (saved) {
+            try {
+              const parsed = JSON.parse(saved) as Widget[];
+              setWidgets(parsed);
+              setNextId(parsed.length + 1);
+            } catch {}
+          }
+        }
+      })();
+    } else {
+      const saved = localStorage.getItem('dashboard.widgets');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved) as Widget[];
+          setWidgets(parsed);
+          setNextId(parsed.length + 1);
+        } catch {}
+      }
     }
-  }, []);
+  }, [searchParams, currentUser?.id]);
 
-  // Adapter la grille à la taille réelle du conteneur d'édition
+  // Adapter la grille à la taille réelle du conteneur d'édition / preview
   useEffect(() => {
     if (!editorRef.current) return;
 
@@ -149,9 +246,8 @@ export default function DashboardEditorPage() {
     const compute = () => {
       const width = el.clientWidth;
       const height = el.clientHeight;
-      const cols = Math.max(8, Math.floor(width / gridSize));
-      const rows = Math.max(12, Math.ceil(height / gridSize) + 2); // marge basse pour scroller
-      setGridCols(cols);
+      const baseRows = Math.max(12, Math.ceil(height / gridSize) + 2); // marge basse pour scroller
+      const rows = isPreviewMode ? Math.max(baseRows, 24) : baseRows;
       setGridRows(rows);
     };
     compute();
@@ -163,11 +259,39 @@ export default function DashboardEditorPage() {
       ro.disconnect();
       window.removeEventListener('resize', compute);
     };
-  }, [gridSize]);
+  }, [gridSize, isPreviewMode]);
 
   // Fonction pour ajouter un widget au dashboard
-  const handleAddWidget = (type: WidgetType, title: string, hostId?: string, itemId?: string) => {
+  const handleAddWidget = (type: WidgetType, title: string, hostId?: string, itemId?: string, config?: WidgetConfig) => {
     const position = findNextFreePosition();
+    
+    // Déduplication simple pour éviter d'ajouter plusieurs fois le même widget suggéré
+    const signatureOf = (w: Partial<Widget>) => {
+      const t = w.type as WidgetType;
+      const h = w.hostId || '';
+      const cfg = (w.config || {}) as WidgetConfig;
+      if (t === 'multiChart') {
+        const series = Array.isArray(cfg.series) ? (cfg.series as string[]).filter(Boolean).sort().join(',') : '';
+        return `multiChart|${h}|${series}`;
+      }
+      if (t === 'gauge' || t === 'availability' || t === 'metricValue') {
+        return `${t}|${h}|${w.itemId || ''}`;
+      }
+      return `${t}|${h}|${w.title || ''}`;
+    };
+    const candidate: Partial<Widget> = { type, hostId, itemId, config, title } as Partial<Widget>;
+    const exists = widgets.some(w => signatureOf(w) === signatureOf(candidate));
+    if (exists) {
+      const existing = widgets.find(w => signatureOf(w) === signatureOf(candidate));
+      if (existing) {
+        setSelectedWidgetId(existing.id);
+        toast('Widget similaire déjà présent — sélectionné');
+      }
+      return;
+    }
+
+    const defaultWidth = isPreviewMode && density === 'spacious' ? 2 : 4;
+    const defaultHeight = isPreviewMode && density === 'spacious' ? 3 : 4;
     
     const newWidget: Widget = {
       id: `widget-${nextId}`,
@@ -175,21 +299,25 @@ export default function DashboardEditorPage() {
       title,
       x: position.x,
       y: position.y,
-      width: 4,
-      height: 4,
+      width: defaultWidth,
+      height: defaultHeight,
       hostId,
       itemId,
-    };
+      // Sécurise multiChart si aucun hôte n'est encore choisi
+      config: config ?? (type === 'multiChart' ? { chartType: 'area', legend: true, showGrid: true, series: [] } :
+        type === 'gauge' ? { warningThreshold: 70, criticalThreshold: 90 } : {}),
+    } as Widget;
     
     setWidgets([...widgets, newWidget]);
     setNextId(nextId + 1);
+    setSelectedWidgetId(newWidget.id);
     toast.success(`Widget "${title}" ajouté`);
   };
 
   // Fonction pour supprimer un widget
   const handleRemoveWidget = (id: string) => {
     setWidgets(widgets.filter(widget => widget.id !== id));
-    toast.info('Widget supprimé');
+    toast('Widget supprimé');
   };
 
   // Fonction pour gérer le début du drag & drop
@@ -284,8 +412,16 @@ export default function DashboardEditorPage() {
            config: (w.config as Record<string, unknown>) || null,
         }));
         const svc = (await import('@/lib/features/dashboard/dashboardService')).default;
-        await svc.createDashboard(dashboardName || 'Mon dashboard', currentUser.id, dto);
-        toast.success('Dashboard sauvegardé');
+        const idParam = searchParams.get('dashboardId');
+        if (idParam) {
+          await svc.updateDashboard(Number(idParam), { name: dashboardName || 'Mon dashboard', widgets: dto });
+          toast.success('Dashboard mis à jour');
+        } else {
+          const created = await svc.createDashboard(dashboardName || 'Mon dashboard', currentUser.id, dto);
+          toast.success('Dashboard sauvegardé');
+          // Rediriger vers l'éditeur avec l'id pour les prochaines sauvegardes
+          router.push(`/dashboard-editor?dashboardId=${created.id}`);
+        }
       }
     } catch {
       toast.error('Échec sauvegarde distante — enregistrement local');
@@ -295,57 +431,164 @@ export default function DashboardEditorPage() {
   };
 
   return (
-    <div className="container mx-auto p-6">
-      <Breadcrumbs items={[{ href: '/', label: 'Accueil' }, { href: '/dashboard', label: 'Dashboard' }, { href: '/dashboard-editor', label: 'Éditeur' }]} />
-      {/* En-tête */}
-      <div className="flex items-center justify-between mb-8">
-      <div className="flex items-center">
-          <Link href="/dashboard" className="mr-4">
-            <Button variant="outline" size="icon">
-              <ArrowLeft className="h-4 w-4" />
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900">
+      {/* Header moderne fixe */}
+      <div className="editor-toolbar px-6 py-4 flex-shrink-0">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link href="/dashboard" className="hover:bg-gray-100 dark:hover:bg-gray-700 p-2 rounded-lg transition-colors">
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+            <div className="h-8 w-px bg-gray-200 dark:bg-gray-700" />
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
+                <LayoutGrid className="h-4 w-4 text-white" />
+              </div>
+              <div>
+                <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  {isPreviewMode ? dashboardName : 'Éditeur de Dashboard'}
+                </h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {isPreviewMode ? 'Mode aperçu' : 'Mode édition'}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          {/* Actions principales */}
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setDensity(prev => prev === 'spacious' ? 'compact' : 'spacious')} title={density === 'spacious' ? 'Passer en compact' : 'Passer en large'}>
+              <LayoutGrid className="h-4 w-4 mr-2" />
+              {density === 'spacious' ? 'Large' : 'Compact'}
             </Button>
-          </Link>
-        <h1 className="text-3xl font-extrabold tracking-tight text-tech-gradient">Éditeur de Dashboard</h1>
+            <Button variant="outline" size="sm" onClick={() => setIsPreviewMode(v => !v)}>
+              {isPreviewMode ? <><EyeOff className="h-4 w-4 mr-2" />Éditer</> : <><Eye className="h-4 w-4 mr-2" />Aperçu</>}
+            </Button>
+            {!isPreviewMode && (
+              <Button size="sm" onClick={handleSaveDashboard} className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white">
+                <Save className="h-4 w-4 mr-2" />
+                Sauvegarder
+              </Button>
+            )}
+          </div>
         </div>
-        <div className="flex gap-2 items-center">
-          <Input
-            className="w-48"
-            placeholder="Nom du dashboard"
-            value={dashboardName}
-            onChange={(e) => setDashboardName(e.target.value)}
-            aria-label="Nom du dashboard"
-          />
-          <Button onClick={handleSaveDashboard}>
-            <Save className="mr-2 h-4 w-4" />
-            Sauvegarder
-          </Button>
-        </div>
+
+        {/* Toolbar secondaire */}
+        {!isPreviewMode && (
+          <div className="mt-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Input 
+                className="w-64" 
+                placeholder="Nom du dashboard" 
+                value={dashboardName} 
+                onChange={(e) => setDashboardName(e.target.value)} 
+              />
+              <div className="h-6 w-px bg-gray-200 dark:bg-gray-700" />
+              <div className="flex items-center gap-2">
+                <Input 
+                  className="w-56" 
+                  placeholder="Rechercher un widget..." 
+                  onKeyDown={(e) => { 
+                    if (e.key === 'Enter') {
+                      const q = (e.target as HTMLInputElement).value.trim();
+                      if (!q) return;
+                      const target = widgets.find(w => (w.title || '').toLowerCase().includes(q.toLowerCase()));
+                      if (target && editorRef.current) {
+                        editorRef.current.scrollTo({ 
+                          top: Math.max(0, target.y - 80), 
+                          left: Math.max(0, target.x - 80), 
+                          behavior: 'smooth' 
+                        });
+                      }
+                    }
+                  }} 
+                />
+                <select
+                  aria-label="Filtrer par hôte"
+                  className="h-9 min-w-[180px] border rounded-md px-3 bg-background text-foreground"
+                  onChange={(e) => {
+                    const hostId = e.target.value;
+                    const none = !hostId;
+                    const container = editorRef.current;
+                    if (!container) return;
+                    const all = Array.from(container.querySelectorAll('[data-host-id]')) as HTMLElement[];
+                    all.forEach(el => {
+                      const h = el.getAttribute('data-host-id');
+                      el.style.opacity = none || h === hostId ? '1' : '0.25';
+                    });
+                  }}
+                >
+                  <option value="">Tous les hôtes</option>
+                  {hosts.map(h => (<option key={h.hostid} value={h.hostid}>{h.name || h.host}</option>))}
+                </select>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                {widgets.length} widget{widgets.length > 1 ? 's' : ''}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowRightPanel((v) => !v)}
+                className={showRightPanel ? 'bg-gray-100 dark:bg-gray-700' : ''}
+              >
+                <PanelRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Panneau latéral pour sélectionner les widgets */}
-        <div className="lg:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Plus className="mr-2 h-4 w-4" />
+      {/* Corps principal */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Sidebar gauche - Widgets */}
+        {!isPreviewMode && (
+          <div className="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 flex items-center">
+                <Plus className="h-4 w-4 mr-2" />
                 Widgets disponibles
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+              </h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Glissez-déposez pour ajouter des widgets
+              </p>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
               <WidgetSelector hosts={hosts} onAddWidget={handleAddWidget} />
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </div>
+        )}
 
-        {/* Zone d'édition du dashboard */}
-        <div className="lg:col-span-3">
-          <Card className="h-[calc(100vh-12rem)]">
-            <CardHeader>
-              <CardTitle>Zone d&apos;édition</CardTitle>
-            </CardHeader>
-            <CardContent className="relative h-[calc(100%-5rem)] overflow-auto">
-              <div ref={editorRef} className="relative h-full w-full">
+        {/* Zone centrale - Canvas */}
+        <div className="flex-1 flex flex-col bg-white dark:bg-gray-800">
+          <div className="flex-1 p-6 overflow-auto">
+            <div 
+              ref={editorRef} 
+              className={`relative h-full w-full min-h-[800px] rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700 editor-scrollbar ${
+                widgets.length === 0 ? 'empty-canvas' : 'editor-canvas'
+              }`}
+              style={{
+                backgroundSize: `${gridSize}px ${gridSize}px`,
+              }}
+            >
+              {widgets.length === 0 && !isPreviewMode && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                      <LayoutGrid className="h-8 w-8 text-gray-400" />
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+                      Commencez votre dashboard
+                    </h3>
+                    <p className="text-gray-500 dark:text-gray-400 max-w-sm">
+                      Sélectionnez des widgets dans le panneau de gauche et glissez-les ici pour créer votre dashboard personnalisé.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <DndContext 
                 sensors={sensors}
                 collisionDetection={closestCenter}
@@ -354,7 +597,7 @@ export default function DashboardEditorPage() {
                 modifiers={[restrictToWindowEdges]}
               >
                 <DashboardGrid 
-                  widgets={widgets} 
+                  widgets={transformedWidgets} 
                   onRemoveWidget={handleRemoveWidget}
                   onUpdateWidget={handleUpdateWidget}
                   selectedWidgetId={selectedWidgetId}
@@ -363,6 +606,7 @@ export default function DashboardEditorPage() {
                   gridSize={gridSize}
                   gridCols={gridCols}
                   gridRows={gridRows}
+                  gap={density === 'spacious' ? 16 : 8}
                 />
                 
                 <DragOverlay dropAnimation={{
@@ -370,17 +614,82 @@ export default function DashboardEditorPage() {
                   easing: 'ease-out'
                 }}>
                   {activeWidget ? (
-                    <div className="shadow-2xl transform rotate-3 opacity-90">
+                    <div className="shadow-2xl transform rotate-3 opacity-90 ring-2 ring-cyan-500">
                       <WidgetComponent widget={activeWidget} isDragging={true} />
                     </div>
                   ) : null}
                 </DragOverlay>
               </DndContext>
-              </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
+
+        {/* Sidebar droite - Propriétés */}
+        {!isPreviewMode && showRightPanel && (
+          <div className="w-80 min-w-80 max-w-80 editor-sidebar border-l border-gray-200 dark:border-gray-700 flex flex-col flex-shrink-0">
+            <RightPanel
+                selectedWidget={transformedWidgets.find(w => w.id === selectedWidgetId) || null}
+                onChange={(updates) => {
+                  if (!selectedWidgetId) return;
+                  setWidgets(prev => prev.map(w => w.id === selectedWidgetId ? { ...w, ...updates } : w));
+                }}
+                onAddWidget={(type, title, hostId, itemId, config) => {
+                  // réutilise handleAddWidget
+                  const signatureOf = (w: Partial<Widget>) => {
+                    const t = w.type as WidgetType;
+                    const h = w.hostId || '';
+                    const cfg = (w.config || {}) as WidgetConfig;
+                    if (t === 'multiChart') {
+                      const series = Array.isArray(cfg.series) ? (cfg.series as string[]).filter(Boolean).sort().join(',') : '';
+                      return `multiChart|${h}|${series}`;
+                    }
+                    if (t === 'gauge' || t === 'availability' || t === 'metricValue') {
+                      return `${t}|${h}|${w.itemId || ''}`;
+                    }
+                    return `${t}|${h}|${w.title || ''}`;
+                  };
+                  const candidate: Partial<Widget> = { type, hostId, itemId, config, title } as Partial<Widget>;
+                  const exists = widgets.some(w => signatureOf(w) === signatureOf(candidate));
+                  if (exists) {
+                    const existing = widgets.find(w => signatureOf(w) === signatureOf(candidate));
+                    if (existing) {
+                      setSelectedWidgetId(existing.id);
+                      toast('Widget similaire déjà présent — sélectionné');
+                    }
+                    return;
+                  }
+                  const pos = findNextFreePosition();
+                  const defaultWidth = isPreviewMode && density === 'spacious' ? 2 : 4;
+                  const defaultHeight = isPreviewMode && density === 'spacious' ? 3 : 4;
+                  
+                  const newWidget: Widget = {
+                    id: `widget-${nextId}`,
+                    type,
+                    title,
+                    x: pos.x,
+                    y: pos.y,
+                    width: defaultWidth,
+                    height: defaultHeight,
+                    hostId,
+                    itemId,
+                    config: (config as WidgetConfig) ?? {},
+                  };
+                  setWidgets(prev => [...prev, newWidget]);
+                  setNextId(prev => prev + 1);
+                  setSelectedWidgetId(newWidget.id);
+                }}
+              />
+          </div>
+        )}
       </div>
     </div>
+  );
+}
+
+export default function DashboardEditorPage() {
+  return (
+    <Suspense fallback={<div className="container mx-auto p-6">Chargement…</div>}>
+      <DashboardEditorPageInner />
+    </Suspense>
   );
 }

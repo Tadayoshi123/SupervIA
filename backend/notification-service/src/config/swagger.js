@@ -10,7 +10,7 @@ const swaggerDefinition = {
   },
   servers: [
     {
-      url: 'http://localhost:3004',
+      url: process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3004',
       description: 'Serveur de développement',
     },
   ],

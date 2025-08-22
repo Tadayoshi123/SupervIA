@@ -7,6 +7,7 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
 const logger = require('./config/logger');
 const errorHandler = require('./middleware/errorHandler');
+const rateLimit = require('express-rate-limit');
 
 dotenv.config();
 
@@ -17,9 +18,16 @@ const port = process.env.PORT || 3000;
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Middlewares de base
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Internal-Api-Key'],
+}));
 app.use(helmet());
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
+const dbLimiter = rateLimit({ windowMs: 60 * 1000, limit: 120, standardHeaders: 'draft-7', legacyHeaders: false });
+app.use('/api', dbLimiter);
 
 // Middleware d'authentification interne pour toutes les routes de l'API
 const authenticateInternalRequest = require('./middleware/authenticateInternalRequest');

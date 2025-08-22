@@ -14,15 +14,17 @@ interface DashboardGridProps {
   gridSize: number;
   gridCols: number;
   gridRows: number;
+  gap?: number; // espacement visuel entre widgets (en px)
 }
 
-export default function DashboardGrid({ widgets, onRemoveWidget, onUpdateWidget, selectedWidgetId, onSelectWidget, onKeyMove, gridSize, gridCols, gridRows }: DashboardGridProps) {
+export default function DashboardGrid({ widgets, onRemoveWidget, onUpdateWidget, selectedWidgetId, onSelectWidget, onKeyMove, gridSize, gridCols, gridRows, gap = 0 }: DashboardGridProps) {
   const { setNodeRef } = useDroppable({ id: 'dashboard-grid' });
 
   return (
     <div
       ref={setNodeRef}
       className="relative w-full h-full bg-gray-50 dark:bg-gray-900 rounded-md overflow-auto"
+      role="grid"
     >
       {/* Surface de la grille avec taille fixe pour dnd */}
       <div className="relative" style={{ width: gridCols * gridSize, height: gridRows * gridSize }}>
@@ -47,7 +49,7 @@ export default function DashboardGrid({ widgets, onRemoveWidget, onUpdateWidget,
         </div>
 
         {/* Widgets */}
-        {widgets.map((widget) => (
+        {widgets.map((widget, idx) => (
           <DraggableWidget
             key={widget.id}
             widget={widget}
@@ -56,6 +58,8 @@ export default function DashboardGrid({ widgets, onRemoveWidget, onUpdateWidget,
             onSelect={onSelectWidget}
             onKeyMove={onKeyMove}
             gridSize={gridSize}
+            gap={gap}
+            tabIndex={selectedWidgetId ? (selectedWidgetId === widget.id ? 0 : -1) : (idx === 0 ? 0 : -1)}
           />
         ))}
       </div>
@@ -70,6 +74,8 @@ interface DraggableWidgetProps {
   onSelect?: (id: string) => void;
   onKeyMove?: (id: string, dx: number, dy: number) => void;
   gridSize: number;
+  gap: number;
+  tabIndex: number;
 }
 
 function DraggableWidget({ 
@@ -79,6 +85,8 @@ function DraggableWidget({
   onSelect,
   onKeyMove,
   gridSize,
+  gap,
+  tabIndex,
 }: DraggableWidgetProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: widget.id,
@@ -90,10 +98,10 @@ function DraggableWidget({
   
   const style = {
     position: 'absolute' as const,
-    left: widget.x,
-    top: widget.y,
-    width: widget.width * gridSize,
-    height: widget.height * gridSize,
+    left: widget.x + gap / 2,
+    top: widget.y + gap / 2,
+    width: Math.max(0, widget.width * gridSize - gap),
+    height: Math.max(0, widget.height * gridSize - gap),
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     zIndex: isDragging ? 1000 : 1,
     opacity: isDragging ? 0.8 : 1,
@@ -116,6 +124,11 @@ function DraggableWidget({
     else if (e.key === 'ArrowRight') dx = gridSize;
     else if (e.key === 'ArrowUp') dy = -gridSize;
     else if (e.key === 'ArrowDown') dy = gridSize;
+    else if (e.key === 'Delete' || e.key === 'Backspace') {
+      e.preventDefault();
+      onRemove(widget.id);
+      return;
+    }
     if (dx !== 0 || dy !== 0) {
       e.preventDefault();
       onKeyMove?.(widget.id, dx, dy);
@@ -130,9 +143,14 @@ function DraggableWidget({
       {...listeners}
       {...attributes}
       onClick={handleClick}
-      tabIndex={isSelected ? 0 : -1}
+      tabIndex={tabIndex}
+      role="button"
+      aria-selected={isSelected}
+      aria-grabbed={isDragging}
       onKeyDown={handleKeyDown}
       suppressHydrationWarning
+      data-id={widget.id}
+      data-host-id={widget.hostId || ''}
     >
       <WidgetComponent 
         widget={widget} 

@@ -6,14 +6,48 @@ const sendTestEmail = async (req, res, next) => {
   const { to, subject, text, html } = req.body;
 
   try {
-    if (!to || !subject || !text) {
-      const error = new Error('Les champs "to", "subject", et "text" sont requis.');
+    const defaultTo = process.env.NOTIF_DEFAULT_TO || '';
+    const resolvedTo = (to && String(to).trim().length > 0)
+      ? to
+      : defaultTo;
+
+    if (!resolvedTo || !subject || !text) {
+      const error = new Error('Paramètres requis manquants. Fournissez "subject" et "text" ("to" facultatif si NOTIF_DEFAULT_TO configuré).');
       error.statusCode = 400;
       throw error;
     }
 
-    logger.info(`Tentative d'envoi d'un email à ${to}`);
-    await sendEmail({ to, subject, text, html });
+    // Si aucun HTML fourni, générer un gabarit simple inspiré du mail d'inscription
+    const fallbackHtml = html || `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${subject}</title>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #0f172a; background:#f8fafc; padding:24px; }
+    .card { background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; max-width:640px; margin:0 auto; overflow:hidden; }
+    .header { background-color: #2563eb; color: white; padding: 16px 20px; }
+    .content { padding: 20px; white-space: pre-wrap; }
+    .footer { background:#f1f5f9; padding: 12px 20px; font-size:12px; color:#475569; }
+  </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="header">
+        <h2 style="margin:0;">Alerte SupervIA</h2>
+      </div>
+      <div class="content">
+        <h3 style="margin-top:0;">${subject}</h3>
+        <pre style="white-space:pre-wrap;margin:0;">${text}</pre>
+      </div>
+      <div class="footer">Cet email a été généré automatiquement par SupervIA.</div>
+    </div>
+  </body>
+  </html>`;
+
+    logger.info(`Tentative d'envoi d'un email à ${resolvedTo}`);
+    await sendEmail({ to: resolvedTo, subject, text, html: fallbackHtml });
 
     // Note: Pour émettre un événement socket, vous pouvez importer `io`
     // depuis `index.js` et l'utiliser ici.

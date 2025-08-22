@@ -10,6 +10,7 @@ const swaggerSpec = require('./config/swagger');
 const logger = require('./config/logger');
 const errorHandler = require('./middleware/errorHandler');
 const notificationRoutes = require('./routes/notificationRoutes');
+const rateLimit = require('express-rate-limit');
 
 dotenv.config();
 
@@ -32,9 +33,23 @@ const port = process.env.PORT || 3000;
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Middlewares de base
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || "http://localhost:3000",
+  credentials: true,
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+}));
 app.use(helmet());
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
+
+// Rate limiting pour l'envoi d'emails
+const notifLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 20,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+});
+app.use('/api/notifications', notifLimiter);
 
 // Endpoint de health check
 app.get('/health', (req, res) => {
@@ -45,6 +60,20 @@ app.get('/health', (req, res) => {
 app.use('/api/notifications', notificationRoutes);
 
 // Gestion des connexions Socket.io
+// Auth Socket.io par JWT (si fourni dans l'auth header du handshake)
+io.use((socket, next) => {
+  try {
+    const authHeader = socket.handshake.headers['authorization'];
+    if (!authHeader) return next(); // autoriser connexion lecture publique si besoin
+    const token = authHeader.split(' ')[1];
+    if (!token) return next();
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    socket.data.user = decoded;
+    next();
+  } catch (e) { next(); }
+});
+
 io.on('connection', (socket) => {
   logger.info(`Un utilisateur s'est connecté via socket: ${socket.id}`);
   

@@ -312,6 +312,165 @@
   overflow: hidden;
 }
 
+/* Styles pour la landing page */
+.landing-gradient-bg {
+  background: linear-gradient(135deg, 
+    rgb(240, 248, 255) 0%, 
+    rgb(236, 254, 255) 25%, 
+    rgb(245, 243, 255) 50%, 
+    rgb(250, 245, 255) 75%, 
+    rgb(255, 250, 240) 100%);
+}
+
+.dark .landing-gradient-bg {
+  background: linear-gradient(135deg, 
+    rgb(15, 23, 42) 0%, 
+    rgb(17, 24, 39) 25%, 
+    rgb(30, 27, 75) 50%, 
+    rgb(45, 25, 75) 75%, 
+    rgb(55, 48, 163) 100%);
+}
+
+/* Hiérarchie typographique améliorée */
+.hero-title {
+  font-size: clamp(3rem, 8vw, 6rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.hero-subtitle {
+  font-size: clamp(1.125rem, 3vw, 1.5rem);
+  line-height: 1.6;
+}
+
+.section-title {
+  font-size: clamp(2rem, 5vw, 3rem);
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.section-subtitle {
+  font-size: clamp(1rem, 2.5vw, 1.25rem);
+  line-height: 1.5;
+}
+
+/* Animations fluides */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.float-animation {
+  animation: float 6s ease-in-out infinite;
+}
+
+/* Amélioration des cartes */
+.feature-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+
+.feature-card:hover {
+  transform: translateY(-8px) scale(1.02);
+}
+
+/* Boutons avec états améliorés */
+.btn-primary {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 14px 0 rgba(0, 118, 255, 0.39);
+}
+
+.btn-primary:hover {
+  box-shadow: 0 6px 20px rgba(0, 118, 255, 0.23);
+  transform: translateY(-1px);
+}
+
+/* Espacements consistants */
+.section-padding {
+  padding-top: clamp(4rem, 10vw, 8rem);
+  padding-bottom: clamp(4rem, 10vw, 8rem);
+}
+
+.container-padding {
+  padding-left: clamp(1rem, 4vw, 3rem);
+  padding-right: clamp(1rem, 4vw, 3rem);
+}
+
+/* Styles pour les pages d'authentification */
+.auth-gradient-bg {
+  background: linear-gradient(135deg, 
+    rgb(240, 248, 255) 0%, 
+    rgb(236, 254, 255) 25%, 
+    rgb(245, 243, 255) 50%, 
+    rgb(250, 245, 255) 75%, 
+    rgb(255, 250, 240) 100%);
+}
+
+.dark .auth-gradient-bg {
+  background: linear-gradient(135deg, 
+    rgb(15, 23, 42) 0%, 
+    rgb(17, 24, 39) 25%, 
+    rgb(30, 27, 75) 50%, 
+    rgb(45, 25, 75) 75%, 
+    rgb(55, 48, 163) 100%);
+}
+
+/* Animations pour les éléments d'authentification */
+.auth-card {
+  animation: slideInUp 0.6s ease-out;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.auth-logo {
+  animation: logoFloat 2s ease-in-out infinite;
+}
+
+@keyframes logoFloat {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* Focus ring amélioré pour l'accessibilité */
+.auth-input:focus {
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.1);
+}
+
+/* Amélioration des boutons OAuth */
+.oauth-button {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.oauth-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.oauth-button:hover::before {
+  left: 100%;
+}
+
 .widget-card:hover {
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
   transform: translateY(-2px);
@@ -375,4 +534,773 @@
   .widget-content {
     padding: 0.5rem;
   }
+}
+
+/* === Dashboard Editor Styles === */
+.editor-canvas {
+  background-image: 
+    radial-gradient(circle, #e5e7eb 1px, transparent 1px),
+    linear-gradient(90deg, rgba(229, 231, 235, 0.3) 1px, transparent 1px),
+    linear-gradient(rgba(229, 231, 235, 0.3) 1px, transparent 1px);
+  background-size: 20px 20px, 20px 20px, 20px 20px;
+  background-position: 0 0, 0 0, 0 0;
+}
+
+.dark .editor-canvas {
+  background-image: 
+    radial-gradient(circle, #374151 1px, transparent 1px),
+    linear-gradient(90deg, rgba(55, 65, 81, 0.3) 1px, transparent 1px),
+    linear-gradient(rgba(55, 65, 81, 0.3) 1px, transparent 1px);
+}
+
+.editor-canvas:hover {
+  background-color: rgba(59, 130, 246, 0.02);
+}
+
+.dark .editor-canvas:hover {
+  background-color: rgba(59, 130, 246, 0.05);
+}
+
+/* Widget en cours de glissement */
+.widget-dragging {
+  transform: rotate(2deg);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  z-index: 50;
+}
+
+/* Indicateurs de zone de drop */
+.drop-zone-indicator {
+  position: absolute;
+  border: 2px dashed #06b6d4;
+  background: rgba(6, 182, 212, 0.1);
+  border-radius: 8px;
+  pointer-events: none;
+  opacity: 0;
+  transition: all 0.2s ease;
+}
+
+.drop-zone-indicator.active {
+  opacity: 1;
+  animation: pulse-border 1s infinite;
+}
+
+@keyframes pulse-border {
+  0%, 100% {
+    border-color: #06b6d4;
+    background: rgba(6, 182, 212, 0.1);
+  }
+  50% {
+    border-color: #0891b2;
+    background: rgba(8, 145, 178, 0.2);
+  }
+}
+
+/* Guides d'alignement */
+.alignment-guide {
+  position: absolute;
+  background: #06b6d4;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+  z-index: 40;
+}
+
+.alignment-guide.horizontal {
+  height: 1px;
+  width: 100%;
+}
+
+.alignment-guide.vertical {
+  width: 1px;
+  height: 100%;
+}
+
+.alignment-guide.visible {
+  opacity: 0.8;
+  animation: guide-flash 0.3s ease;
+}
+
+@keyframes guide-flash {
+  0% { opacity: 0; }
+  50% { opacity: 1; }
+  100% { opacity: 0.8; }
+}
+
+/* Sélection de widget */
+.widget-selected {
+  ring: 2px;
+  ring-color: #06b6d4;
+  ring-opacity: 1;
+  outline: none;
+  transform: scale(1.02);
+  transition: all 0.2s ease;
+}
+
+.widget-selected::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border: 2px solid #06b6d4;
+  border-radius: inherit;
+  pointer-events: none;
+  animation: selection-pulse 2s infinite;
+}
+
+@keyframes selection-pulse {
+  0%, 100% {
+    border-color: #06b6d4;
+    box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.7);
+  }
+  50% {
+    border-color: #0891b2;
+    box-shadow: 0 0 0 4px rgba(6, 182, 212, 0);
+  }
+}
+
+/* Toolbar moderne */
+.editor-toolbar {
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.95);
+  border-bottom: 1px solid rgba(229, 231, 235, 0.8);
+}
+
+.dark .editor-toolbar {
+  background: rgba(17, 24, 39, 0.95);
+  border-bottom: 1px solid rgba(55, 65, 81, 0.8);
+}
+
+/* Panneau latéral */
+.editor-sidebar {
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.98);
+}
+
+.dark .editor-sidebar {
+  background: rgba(17, 24, 39, 0.98);
+}
+
+/* États vides améliorés */
+.empty-canvas {
+  background: 
+    radial-gradient(circle at 50% 50%, rgba(6, 182, 212, 0.1) 0%, transparent 50%),
+    radial-gradient(circle, #e5e7eb 1px, transparent 1px);
+  background-size: 200px 200px, 20px 20px;
+  animation: empty-pulse 4s ease-in-out infinite;
+}
+
+.dark .empty-canvas {
+  background: 
+    radial-gradient(circle at 50% 50%, rgba(6, 182, 212, 0.15) 0%, transparent 50%),
+    radial-gradient(circle, #374151 1px, transparent 1px);
+  background-size: 200px 200px, 20px 20px;
+}
+
+@keyframes empty-pulse {
+  0%, 100% {
+    background-position: 0% 0%, 0 0;
+  }
+  50% {
+    background-position: 100% 100%, 0 0;
+  }
+}
+
+/* Transitions fluides pour les onglets */
+.tab-content-enter {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.tab-content-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: all 0.3s ease;
+}
+
+.tab-content-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.tab-content-exit-active {
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: all 0.3s ease;
+}
+
+/* Améliorations pour les boutons gradient */
+.btn-gradient {
+  background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);
+  box-shadow: 0 4px 15px 0 rgba(6, 182, 212, 0.3);
+  transition: all 0.3s ease;
+}
+
+.btn-gradient:hover {
+  background: linear-gradient(135deg, #0891b2 0%, #2563eb 100%);
+  box-shadow: 0 6px 20px 0 rgba(6, 182, 212, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-gradient:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 10px 0 rgba(6, 182, 212, 0.2);
+}
+
+/* Améliorations des widgets */
+.widget-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.widget-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+}
+
+.widget-card:hover::before {
+  transform: translateX(100%);
+}
+
+/* Animation des métriques */
+.metric-value {
+  animation: countUp 0.8s ease-out;
+}
+
+@keyframes countUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Effet de brillance sur les graphiques */
+.chart-container {
+  position: relative;
+}
+
+.chart-container::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  animation: chartShine 3s ease-in-out infinite;
+}
+
+@keyframes chartShine {
+  0% { left: -100%; }
+  50% { left: 100%; }
+  100% { left: 100%; }
+}
+
+/* Indicateurs de statut animés */
+.status-indicator {
+  position: relative;
+}
+
+.status-indicator.online::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  background: inherit;
+  border-radius: inherit;
+  transform: translate(-50%, -50%);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.4);
+    opacity: 0;
+  }
+}
+
+/* Scrollbars personnalisées pour l'éditeur */
+.editor-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.editor-scrollbar::-webkit-scrollbar-track {
+  background: rgba(229, 231, 235, 0.3);
+  border-radius: 4px;
+}
+
+.editor-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(6, 182, 212, 0.5);
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.editor-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(6, 182, 212, 0.7);
+}
+
+.dark .editor-scrollbar::-webkit-scrollbar-track {
+  background: rgba(55, 65, 81, 0.3);
+}
+
+.dark .editor-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(6, 182, 212, 0.6);
+}
+
+.dark .editor-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(6, 182, 212, 0.8);
+}
+
+/* === NORMALISATION CROSS-BROWSER === */
+
+/* Scrollbars universelles (webkit + firefox) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(6, 182, 212, 0.5) rgba(229, 231, 235, 0.3);
+}
+
+.dark * {
+  scrollbar-color: rgba(6, 182, 212, 0.6) rgba(55, 65, 81, 0.3);
+}
+
+/* Webkit scrollbars (Chrome, Safari, Edge) */
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: rgba(229, 231, 235, 0.3);
+  border-radius: 4px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(6, 182, 212, 0.5);
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.2s ease;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(6, 182, 212, 0.7);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.dark *::-webkit-scrollbar-track {
+  background: rgba(55, 65, 81, 0.3);
+}
+
+.dark *::-webkit-scrollbar-thumb {
+  background: rgba(6, 182, 212, 0.6);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+.dark *::-webkit-scrollbar-thumb:hover {
+  background: rgba(6, 182, 212, 0.8);
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+/* Inputs de type number - suppression des spinners/flèches */
+input[type="number"] {
+  -moz-appearance: textfield; /* Firefox */
+  appearance: textfield;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none; /* Chrome, Safari, Edge */
+  margin: 0;
+}
+
+/* Custom number input controls */
+.number-input-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.number-input-controls {
+  position: absolute;
+  right: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.number-input-btn {
+  width: 16px;
+  height: 14px;
+  border: none;
+  background: rgba(6, 182, 212, 0.1);
+  color: rgb(6, 182, 212);
+  cursor: pointer;
+  font-size: 10px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 2px;
+  transition: all 0.15s ease;
+}
+
+.number-input-btn:hover {
+  background: rgba(6, 182, 212, 0.2);
+  color: rgb(8, 145, 178);
+}
+
+.number-input-btn:active {
+  background: rgba(6, 182, 212, 0.3);
+  transform: scale(0.95);
+}
+
+.dark .number-input-btn {
+  background: rgba(6, 182, 212, 0.15);
+  color: rgb(103, 232, 249);
+}
+
+.dark .number-input-btn:hover {
+  background: rgba(6, 182, 212, 0.25);
+  color: rgb(125, 211, 252);
+}
+
+/* Selects personnalisés - suppression du style natif */
+select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 16px;
+  padding-right: 32px;
+}
+
+select:focus {
+  outline: 2px solid rgba(6, 182, 212, 0.5);
+  outline-offset: 2px;
+}
+
+.dark select {
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2367e8f9' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+}
+
+/* Options dans les selects */
+select option {
+  background: var(--background);
+  color: var(--foreground);
+  padding: 8px 12px;
+}
+
+select option:checked {
+  background: rgba(6, 182, 212, 0.1);
+  color: rgb(6, 182, 212);
+}
+
+.dark select option:checked {
+  background: rgba(6, 182, 212, 0.2);
+  color: rgb(103, 232, 249);
+}
+
+/* Checkboxes et radio buttons personnalisés */
+input[type="checkbox"],
+input[type="radio"] {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border);
+  background: var(--background);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+input[type="checkbox"] {
+  border-radius: 4px;
+}
+
+input[type="radio"] {
+  border-radius: 50%;
+}
+
+input[type="checkbox"]:checked,
+input[type="radio"]:checked {
+  border-color: rgb(6, 182, 212);
+  background: rgb(6, 182, 212);
+}
+
+input[type="checkbox"]:checked::before {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+input[type="radio"]:checked::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: white;
+}
+
+input[type="checkbox"]:focus,
+input[type="radio"]:focus {
+  outline: 2px solid rgba(6, 182, 212, 0.5);
+  outline-offset: 2px;
+}
+
+input[type="checkbox"]:hover,
+input[type="radio"]:hover {
+  border-color: rgb(6, 182, 212);
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.1);
+}
+
+/* Inputs de texte - focus states uniformes */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="url"],
+input[type="search"],
+textarea {
+  transition: all 0.2s ease;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="url"]:focus,
+input[type="search"]:focus,
+textarea:focus {
+  outline: 2px solid rgba(6, 182, 212, 0.5);
+  outline-offset: 2px;
+  border-color: rgb(6, 182, 212);
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.1);
+}
+
+/* Suppression de l'auto-zoom sur iOS Safari */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="url"],
+input[type="search"],
+input[type="number"],
+textarea,
+select {
+  font-size: 16px; /* Évite le zoom automatique sur iOS */
+}
+
+@media (min-width: 768px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="url"],
+  input[type="search"],
+  input[type="number"],
+  textarea,
+  select {
+    font-size: 14px; /* Taille normale sur desktop */
+  }
+}
+
+/* Buttons - styles uniformes */
+button {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent; /* Supprime le highlight sur mobile */
+}
+
+button:focus {
+  outline: 2px solid rgba(6, 182, 212, 0.5);
+  outline-offset: 2px;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Suppression du style des datalists (suggestions) */
+input::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  cursor: pointer;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3crect x='3' y='4' width='18' height='18' rx='2' ry='2'%3e%3c/rect%3e%3cline x1='16' y1='2' x2='16' y2='6'%3e%3c/line%3e%3cline x1='8' y1='2' x2='8' y2='6'%3e%3c/line%3e%3cline x1='3' y1='10' x2='21' y2='10'%3e%3c/line%3e%3c/svg%3e");
+  opacity: 0.6;
+  width: 16px;
+  height: 16px;
+}
+
+.dark input[type="date"]::-webkit-calendar-picker-indicator,
+.dark input[type="time"]::-webkit-calendar-picker-indicator,
+.dark input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2367e8f9' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3crect x='3' y='4' width='18' height='18' rx='2' ry='2'%3e%3c/rect%3e%3cline x1='16' y1='2' x2='16' y2='6'%3e%3c/line%3e%3cline x1='8' y1='2' x2='8' y2='6'%3e%3c/line%3e%3cline x1='3' y1='10' x2='21' y2='10'%3e%3c/line%3e%3c/svg%3e");
+}
+
+/* Progress bars personnalisées */
+progress {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--muted);
+  overflow: hidden;
+}
+
+progress::-webkit-progress-bar {
+  background: var(--muted);
+  border-radius: 4px;
+}
+
+progress::-webkit-progress-value {
+  background: linear-gradient(90deg, rgb(6, 182, 212), rgb(59, 130, 246));
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+progress::-moz-progress-bar {
+  background: linear-gradient(90deg, rgb(6, 182, 212), rgb(59, 130, 246));
+  border-radius: 4px;
+}
+
+/* Range sliders personnalisés */
+input[type="range"] {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--muted);
+  outline: none;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 18px;
+  width: 18px;
+  border-radius: 50%;
+  background: rgb(6, 182, 212);
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  background: rgb(8, 145, 178);
+  transform: scale(1.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+input[type="range"]::-moz-range-thumb {
+  height: 18px;
+  width: 18px;
+  border-radius: 50%;
+  background: rgb(6, 182, 212);
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+  background: rgb(8, 145, 178);
+  transform: scale(1.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Suppression des highlights sur mobile */
+* {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Réactivation de la sélection pour les éléments de texte */
+input,
+textarea,
+.selectable,
+[contenteditable="true"],
+p,
+span,
+h1, h2, h3, h4, h5, h6,
+li,
+td,
+th,
+label {
+  -webkit-user-select: text;
+  -khtml-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
+/* Amélioration des tooltips natifs */
+[title] {
+  position: relative;
+}
+
+/* Normalisation des polices */
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Suppression du flicker de chargement */
+* {
+  -webkit-backface-visibility: hidden;
+  -moz-backface-visibility: hidden;
+  -ms-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+/* Box-sizing universel */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
