@@ -1,8 +1,8 @@
 {
-  "backend/db-service": "1.0.0",
-  "backend/auth-service": "1.0.0",
-  "backend/metrics-service": "1.0.0",
-  "backend/notification-service": "1.0.0",
-  "backend/ai-service": "1.0.0",
-  "frontend/supervia": "1.0.0"
+  "backend/db-service": "1.1.0",
+  "backend/auth-service": "1.1.0",
+  "backend/metrics-service": "1.1.0",
+  "backend/notification-service": "1.1.0",
+  "backend/ai-service": "1.1.0",
+  "frontend/supervia": "1.1.0"
 }

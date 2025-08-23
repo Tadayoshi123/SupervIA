@@ -1,6 +1,6 @@
 {
   "name": "metrics-service",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
@@ -25,7 +25,7 @@
     "zabbix-promise": "^2.0.2"
   },
   "devDependencies": {
-    "jest": "^30.0.5", 
+    "jest": "^30.0.5",
     "supertest": "^7.1.4",
     "nodemon": "^3.1.4",
     "pino-pretty": "^13.1.1"
