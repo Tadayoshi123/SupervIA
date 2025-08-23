@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/Tadayoshi123/SupervIA/compare/auth-service-v1.1.0...auth-service-v1.2.0) (2025-08-23)
+
+
+### Features
+
+* add comprehensive JSDoc documentation and improve code consistency ([9cd2d84](https://github.com/Tadayoshi123/SupervIA/commit/9cd2d84369aad2ae92e03492109bb436d890c7b2))
+
 ## [1.1.0](https://github.com/Tadayoshi123/SupervIA/compare/auth-service-v1.0.0...auth-service-v1.1.0) (2025-08-23)
 
 
