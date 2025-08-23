@@ -7,9 +7,39 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { X, AlertCircle, Gauge, CheckCircle, Activity, Hash, TrendingUp, PieChart } from 'lucide-react';
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import metricsService from '@/lib/features/metrics/metricsService';
 import notificationService from '@/lib/features/notifications/notificationService';
+import { sendEnrichedAlert } from '@/lib/utils/alertUtils';
+
+// Helper pour créer des notifications locales enrichies
+const createEnrichedNotification = (
+  widgetId: string, 
+  type: string, 
+  subject: string, 
+  text: string, 
+  hostName?: string, 
+  metricName?: string,
+  severity?: string
+) => {
+  try {
+    const raw = localStorage.getItem('supervia.notifications') || '[]';
+    const arr = JSON.parse(raw);
+    const now = Date.now();
+    arr.push({ 
+      id: `${widgetId}-${type}-${now}`, 
+      title: subject, 
+      time: now, 
+      body: text, 
+      read: false,
+      type,
+      severity: severity?.toLowerCase() || 'warning',
+      hostName: hostName || '',
+      metricName: metricName || ''
+    });
+    localStorage.setItem('supervia.notifications', JSON.stringify(arr));
+  } catch {}
+};
 import toast from 'react-hot-toast';
 
 interface WidgetComponentProps {
@@ -23,6 +53,22 @@ export default function WidgetComponent({ widget, onRemove, isDragging }: Widget
   const items = useAppSelector(selectItemsForHost(widget.hostId || ''));
   const problems = useAppSelector(selectProblems);
   const hosts = useAppSelector(selectHosts);
+  
+  // Carte globale pour récupérer les noms de métriques de tous les hôtes
+  const allItemsByHost = useAppSelector((state) => (state as any).metrics.items as Record<string, any[]>);
+  const { itemLabelById, hostNameById } = useMemo(() => {
+    const labelMap: Record<string, string> = {};
+    const hostNameMap: Record<string, string> = {};
+    (hosts || []).forEach((h: any) => { hostNameMap[h.hostid] = h.name || h.host || String(h.hostid); });
+    if (allItemsByHost) {
+      Object.values(allItemsByHost).forEach((arr) => {
+        (arr || []).forEach((it: any) => {
+          labelMap[it.itemid] = it.name || it.key_ || String(it.itemid);
+        });
+      });
+    }
+    return { itemLabelById: labelMap, hostNameById: hostNameMap };
+  }, [allItemsByHost, hosts]);
   
   const item = widget.itemId ? items.find(i => i.itemid === widget.itemId) : undefined;
   const host = widget.hostId ? hosts.find(h => h.hostid === widget.hostId) : undefined;
@@ -110,7 +156,7 @@ export default function WidgetComponent({ widget, onRemove, isDragging }: Widget
   
   // (Supprimé) Données factices inutiles
 
-  // Évaluation des alertes pour widgets mono‑métriques (metricValue uniquement)
+  // Alertes enrichies pour widgets mono‑métriques (metricValue uniquement)
   useEffect(() => {
     if (!(widget.type === 'metricValue')) return;
     const cfg: any = widget.config || {};
@@ -121,6 +167,7 @@ export default function WidgetComponent({ widget, onRemove, isDragging }: Widget
     const cooldownSec = Number(cfg.cooldownSec || 300);
     const baseKey = `supervia.cooldown.single.${widget.id}`;
     const now = Date.now();
+    
     for (let idx = 0; idx < cfg.alerts.length; idx++) {
       const r = cfg.alerts[idx];
       if (r.targetItemId && r.targetItemId !== widget.itemId) continue;
@@ -128,21 +175,58 @@ export default function WidgetComponent({ widget, onRemove, isDragging }: Widget
       const op = r.operator as string;
       const ok = op === '>' ? value > thr : op === '>=' ? value >= thr : op === '<' ? value < thr : value <= thr;
       if (!ok) continue;
+      
       const ck = `${baseKey}.${idx}`;
       const last = typeof window !== 'undefined' ? Number(localStorage.getItem(ck) || 0) : 0;
       if (now - last <= cooldownSec * 1000) continue;
+      
       const severity = (r.severity || 'warning').toUpperCase();
       const subject = `[${severity}] ${widget.title || 'Métrique'} (${item?.name || ''})`;
       const text = `Widget: ${widget.title || 'Métrique'}\nHost: ${host?.name || widget.hostId}\nMetric: ${item?.name}\nCondition: ${op} ${thr}\nValeur: ${value}${item?.units || ''}`;
-      try {
-        const raw = localStorage.getItem('supervia.notifications') || '[]';
-        const arr = JSON.parse(raw);
-        arr.push({ id: `${widget.id}-single-${now}-${idx}`, title: subject, time: now, body: text, read: false });
-        localStorage.setItem('supervia.notifications', JSON.stringify(arr));
-      } catch {}
+      
+      // Notification locale enrichie
+      createEnrichedNotification(
+        widget.id, 
+        'metricValue', 
+        subject, 
+        text, 
+        host?.name || widget.hostId, 
+        item?.name,
+        r.severity
+      );
+      
       try { toast.success(subject); } catch {}
-      notificationService.sendEmail({ subject, text }).catch(() => { try { toast.error("Échec de l'envoi de l'email"); } catch {} });
-      if (typeof window !== 'undefined') localStorage.setItem(ck, String(now));
+      
+      // Alerte enrichie avec contexte
+      const prevValue = Number(localStorage.getItem(`${widget.id}-metric-prev-value`) || value);
+      const conditionText = op === '>' ? `supérieur à ${thr}` : 
+                          op === '>=' ? `supérieur ou égal à ${thr}` :
+                          op === '<' ? `inférieur à ${thr}` : 
+                          op === '<=' ? `inférieur ou égal à ${thr}` :
+                          `condition ${op} ${thr}`;
+      
+      sendEnrichedAlert({
+        widget,
+        hostName: host?.name || widget.hostId || 'Hôte inconnu',
+        metricName: item?.name || 'Métrique',
+        currentValue: value,
+        threshold: thr,
+        units: item?.units || '',
+        condition: conditionText,
+        trend: value > prevValue ? 'increasing' : value < prevValue ? 'decreasing' : 'stable',
+        previousValue: prevValue !== value ? prevValue : undefined
+      }).catch(() => {
+        // Fallback vers l'ancien système
+        notificationService.sendEmail({ subject, text }).catch(() => { 
+          try { toast.error("Échec de l'envoi de l'email"); } catch {} 
+        });
+      });
+      
+      // Stocker la valeur précédente et le timestamp
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`${widget.id}-metric-prev-value`, String(value));
+        localStorage.setItem(ck, String(now));
+      }
     }
   }, [widget.type, widget.id, widget.itemId, widget.config, item?.lastvalue, host?.name, widget.hostId]);
 
@@ -166,7 +250,7 @@ export default function WidgetComponent({ widget, onRemove, isDragging }: Widget
           );
         }
         const seriesColors = (widget.config?.seriesColors || {}) as Record<string, string>;
-        const palette = ['#22d3ee', '#8b5cf6', '#ef4444', '#10b981', '#f59e0b'];
+        const palette = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6']; // Bleu, Rouge, Vert, Orange, Violet
         const colorFor = (idx: number) => palette[idx % palette.length];
         const chartType = widget.config?.chartType || 'area';
         const showLegend = widget.config?.legend !== false;
@@ -175,40 +259,108 @@ export default function WidgetComponent({ widget, onRemove, isDragging }: Widget
         const forecastColor = (widget.config?.forecastColor as string) || '#94a3b8';
         const forecast = (widget.config?.forecastPoints || []).map(p => ({ ts: (p.ts > 1e12 ? p.ts : p.ts * 1000), value: p.value }));
         const seriesMeta = seriesIds.map((sid, idx) => {
-          const it = hostItems.find((x) => x.itemid === sid);
           const c = seriesColors[sid] || colorFor(idx);
-          return { key: `s${idx}`, sid, name: it?.name || it?.key_ || `Métrique ${idx + 1}`, color: c } as { key: string; sid: string; name: string; color: string };
+          const name = itemLabelById[sid] || `Métrique ${idx + 1}`;
+          return { key: `s${idx}`, sid, name, color: c } as { key: string; sid: string; name: string; color: string };
         });
-        // Notification multi‑métriques (MVP) : si notifyOnMulti et une règle est vraie, envoi avec cooldown
+        // Alertes enrichies multi‑métriques avec gestion distincte par métrique
         try {
           const cfg: any = widget.config || {};
-          const enabled = !!cfg.notifyOnMulti;
           const cooldownSec = Number(cfg.cooldownSec || 300);
-          const keyBase = `supervia.cooldown.multichart.${widget.id}`;
-          if (enabled && Array.isArray(cfg.alerts) && cfg.alerts.length > 0 && multiData.length > 0) {
+          
+          if (Array.isArray(cfg.alerts) && cfg.alerts.length > 0 && multiData.length > 0) {
             const lastRow = multiData[multiData.length - 1] as any;
+            const now = Date.now();
+            
             for (let idx = 0; idx < cfg.alerts.length; idx++) {
               const r = cfg.alerts[idx];
               const seriesIdx = seriesIds.findIndex((id) => id === r.targetItemId);
               if (seriesIdx === -1) continue;
+              
               const val = Number(lastRow[`s${seriesIdx}`]);
               if (!Number.isFinite(val)) continue;
+              
               const op = r.operator as string;
               const thr = Number(r.threshold);
               const ok = op === '>' ? val > thr : op === '>=' ? val >= thr : op === '<' ? val < thr : val <= thr;
-              if (ok) {
-                const ck = `${keyBase}.${idx}`;
-                const last = typeof window !== 'undefined' ? Number(localStorage.getItem(ck) || 0) : 0;
-                const now = Date.now();
-                if (now - last > cooldownSec * 1000) {
-                  const lbl = seriesMeta[seriesIdx]?.name || `s${seriesIdx}`;
-                  const subject = `[${(r.severity || 'warning').toUpperCase()}] ${widget.title || 'Multi‑métriques'} - ${lbl}`;
-                  const text = `Widget: ${widget.title || 'Multi‑métriques'}\nHost: ${host?.name || widget.hostId}\nSérie: ${lbl}\nCondition: ${op} ${thr}\nValeur: ${val}`;
-                  try { const raw = localStorage.getItem('supervia.notifications') || '[]'; const arr = JSON.parse(raw); arr.push({ id: `${widget.id}-multi-${now}-${idx}`, title: subject, time: now, body: text, read: false }); localStorage.setItem('supervia.notifications', JSON.stringify(arr)); } catch {}
-                  try { toast.success(subject); } catch {}
-                  notificationService.sendEmail({ subject, text }).catch(() => { try { toast.error("Échec de l'envoi de l'email"); } catch {} });
-                  if (typeof window !== 'undefined') localStorage.setItem(ck, String(now));
+              if (!ok) continue;
+              
+              // Clé de cooldown unique par métrique ET par alerte pour éviter les conflits
+              const targetItemId = r.targetItemId;
+              const ck = `supervia.cooldown.multichart.${widget.id}.${targetItemId}.${idx}`;
+              const last = typeof window !== 'undefined' ? Number(localStorage.getItem(ck) || 0) : 0;
+              if (now - last <= cooldownSec * 1000) continue;
+              
+              // Récupérer le nom réel de la métrique et l'hôte source
+              let metricName = `Métrique ${seriesIdx + 1}`;
+              let metricHostId = widget.hostId;
+              let metricHostName = host?.name || 'Hôte inconnu';
+              
+              // Chercher dans tous les hôtes pour trouver celui qui contient cette métrique
+              if (allItemsByHost) {
+                Object.entries(allItemsByHost).forEach(([hostId, items]) => {
+                  const foundItem = items.find((item: any) => item.itemid === targetItemId);
+                  if (foundItem) {
+                    metricHostId = hostId;
+                    metricHostName = hostNameById[hostId] || hostId;
+                    metricName = foundItem.name || foundItem.key_ || `Métrique ${seriesIdx + 1}`;
+                  }
+                });
+              }
+              
+              // Fallback : utiliser seriesMeta si on n'a pas trouvé dans allItemsByHost
+              if (metricName === `Métrique ${seriesIdx + 1}` && seriesMeta[seriesIdx]) {
+                metricName = seriesMeta[seriesIdx].name;
+              }
+              
+              const subject = `[${(r.severity || 'warning').toUpperCase()}] ${widget.title || 'Multi‑métriques'} - ${metricName}`;
+              const text = `Widget: ${widget.title || 'Multi‑métriques'}\nHost: ${metricHostName}\nSérie: ${metricName}\nCondition: ${op} ${thr}\nValeur: ${val}`;
+              
+              // Notification locale enrichie
+              createEnrichedNotification(
+                widget.id, 
+                'multiChart', 
+                subject, 
+                text, 
+                metricHostName, 
+                metricName,
+                r.severity
+              );
+              
+              try { toast.success(subject); } catch {}
+              
+              // Alerte enrichie avec contexte spécifique à cette métrique
+              const prevValue = Number(localStorage.getItem(`${widget.id}-multi-${targetItemId}-prev-value`) || val);
+              const conditionText = op === '>' ? `supérieur à ${thr}` : 
+                                  op === '>=' ? `supérieur ou égal à ${thr}` :
+                                  op === '<' ? `inférieur à ${thr}` : 
+                                  op === '<=' ? `inférieur ou égal à ${thr}` :
+                                  `condition ${op} ${thr}`;
+              
+              sendEnrichedAlert({
+                widget,
+                hostName: metricHostName,
+                metricName: metricName,
+                currentValue: val,
+                threshold: thr,
+                condition: conditionText,
+                trend: val > prevValue ? 'increasing' : val < prevValue ? 'decreasing' : 'stable',
+                previousValue: prevValue !== val ? prevValue : undefined,
+                additionalContext: {
+                  trend: `Métrique ${metricName} sur ${metricHostName}`,
+                  frequency: `Widget multiChart avec ${seriesIds.length} métrique(s)`
                 }
+              }).catch(() => {
+                // Fallback vers l'ancien système
+                notificationService.sendEmail({ subject, text }).catch(() => { 
+                  try { toast.error("Échec de l'envoi de l'email"); } catch {} 
+                });
+              });
+              
+              // Stocker les valeurs précédentes et le timestamp pour cette métrique spécifique
+              if (typeof window !== 'undefined') {
+                localStorage.setItem(`${widget.id}-multi-${targetItemId}-prev-value`, String(val));
+                localStorage.setItem(ck, String(now));
               }
             }
           }
@@ -222,13 +374,90 @@ export default function WidgetComponent({ widget, onRemove, isDragging }: Widget
               (widget.config?.yMin ?? 'auto') as any,
               (widget.config?.yMax ?? 'auto') as any
             ]} />
-            <Tooltip />
-            {showLegend && <Legend />}
+            <Tooltip 
+              content={({ active, payload, label }) => {
+                if (!active || !payload || payload.length === 0) return null;
+                return (
+                  <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2 shadow-lg">
+                    <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                      {new Date(Number(label)).toLocaleString('fr-FR')}
+                    </div>
+                    {payload.map((entry: any) => {
+                      const serieIndex = parseInt(entry.dataKey.replace('s', ''));
+                      const serieMeta = seriesMeta[serieIndex];
+                      return (
+                        <div key={entry.dataKey} className="flex items-center gap-2 text-xs">
+                          <div 
+                            className="w-2 h-2 rounded-full" 
+                            style={{ backgroundColor: entry.color }}
+                          />
+                          <span className="font-medium">{serieMeta?.name || entry.dataKey}:</span>
+                          <span>{entry.value}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              }}
+            />
           </>
         );
+        // Fonction pour tronquer les noms de métriques
+        const truncateMetricName = (name: string, maxLength: number = 20) => {
+          if (name.length <= maxLength) return name;
+          return name.substring(0, maxLength - 3) + '...';
+        };
+
+        // Créer un titre informatif pour les multiCharts
+        const getMultiChartTitle = () => {
+          if (seriesMeta.length === 0) return widget.title;
+          
+          // Récupérer les hôtes uniques des métriques
+          const hostIds = new Set<string>();
+          seriesIds.forEach(sid => {
+            // Trouver l'hôte de cette métrique dans allItemsByHost
+            Object.entries(allItemsByHost || {}).forEach(([hostId, items]) => {
+              if (items.some((item: any) => item.itemid === sid)) {
+                hostIds.add(hostId);
+              }
+            });
+          });
+          
+          const hostNames = Array.from(hostIds).map(hostId => hostNameById[hostId] || hostId);
+          const hostPart = hostNames.length > 1 
+            ? `${hostNames.length} hôtes` 
+            : hostNames[0] || hostNameById[widget.hostId || ''] || 'Hôte inconnu';
+            
+          return `${widget.title} - ${hostPart}`;
+        };
+
         return (
           <div className="flex flex-col h-full" suppressHydrationWarning>
-            <div className="px-3 pt-2 text-xs text-muted-foreground line-clamp-2" title={widget.title}>{widget.title}</div>
+            <div className="px-3 pt-2 text-xs text-muted-foreground line-clamp-2" title={getMultiChartTitle()}>{getMultiChartTitle()}</div>
+            
+            {/* Légende personnalisée compacte */}
+            {showLegend && seriesMeta.length > 0 && (
+              <div className="px-2 pb-1">
+                <div className="flex flex-wrap gap-1 text-xs">
+                  {seriesMeta.map((s) => (
+                    <div 
+                      key={s.key} 
+                      className="flex items-center gap-1 px-1 py-0.5 rounded bg-gray-50 dark:bg-gray-800"
+                      title={s.name}
+                    >
+                      <div 
+                        className="w-2 h-2 rounded-full flex-shrink-0" 
+                        style={{ backgroundColor: s.color }}
+                      />
+                      <span className="text-xs text-gray-700 dark:text-gray-300 truncate max-w-[80px]">
+                        {truncateMetricName(s.name, 15)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
             <div className="flex-1 min-h-0 px-2 pb-2">
               <ResponsiveContainer width="100%" height="100%" minHeight={140}>
                 {chartType === 'line' ? (
@@ -279,11 +508,12 @@ export default function WidgetComponent({ widget, onRemove, isDragging }: Widget
         const crit = widget.config?.criticalThreshold ?? 90;
         const status = value >= crit ? 'critique' : value >= warn ? 'avertissement' : 'normal';
         const color = status === 'critique' ? '#ef4444' : status === 'avertissement' ? '#f59e0b' : '#10b981';
-        // Envoi email (MVP) si notifyOnGauge et valeur >= niveau choisi, avec cooldown local par widget
+        // Envoi email (MVP) si alertes configurées et valeur >= niveau choisi, avec cooldown local par widget
         try {
           const cfg: any = widget.config || {};
           const level: 'warning' | 'critical' = cfg.gaugeNotifyLevel || 'critical';
-          const shouldNotify = cfg.notifyOnGauge && ((level === 'critical' && value >= crit) || (level === 'warning' && value >= warn));
+          const hasAlerts = Array.isArray(cfg.alerts) && cfg.alerts.length > 0;
+          const shouldNotify = hasAlerts && ((level === 'critical' && value >= crit) || (level === 'warning' && value >= warn));
           const cooldownSec = Number(cfg.cooldownSec || 300);
           const key = `supervia.cooldown.gauge.${widget.id}`;
           const last = typeof window !== 'undefined' ? Number(localStorage.getItem(key) || 0) : 0;
@@ -291,10 +521,42 @@ export default function WidgetComponent({ widget, onRemove, isDragging }: Widget
           if (shouldNotify && now - last > cooldownSec * 1000) {
             const subject = `[${status.toUpperCase()}] ${widget.title || 'Jauge'} (${item?.name || ''})`;
             const text = `Widget: ${widget.title || 'Jauge'}\nHost: ${host?.name || widget.hostId}\nMetric: ${item?.name}\nValue: ${value}${item?.units || '%'}\nThresholds: warn=${warn}, crit=${crit}`;
-            try { const raw = localStorage.getItem('supervia.notifications') || '[]'; const arr = JSON.parse(raw); arr.push({ id: `${widget.id}-gauge-${now}`, title: subject, time: now, body: text, read: false }); localStorage.setItem('supervia.notifications', JSON.stringify(arr)); } catch {}
+            
+            // Notification locale enrichie
+            createEnrichedNotification(
+              widget.id, 
+              'gauge', 
+              subject, 
+              text, 
+              host?.name || widget.hostId, 
+              item?.name,
+              status
+            );
+            
             try { toast.success(subject); } catch {}
-            notificationService.sendEmail({ subject, text }).catch(() => { try { toast.error("Échec de l'envoi de l'email"); } catch {} });
-            if (typeof window !== 'undefined') localStorage.setItem(key, String(now));
+            
+            // Alerte enrichie
+            sendEnrichedAlert({
+              widget,
+              hostName: host?.name || widget.hostId || 'Hôte inconnu',
+              metricName: item?.name || 'Métrique',
+              currentValue: value,
+              threshold: status === 'critique' ? crit : warn,
+              units: item?.units || '%',
+              condition: `supérieur à ${status === 'critique' ? crit : warn}`,
+              trend: value > (last > 0 ? Number(localStorage.getItem(`${widget.id}-gauge-prev-value`)) || value : value) ? 'increasing' : 'decreasing'
+            }).catch(() => {
+              // Fallback vers l'ancien système
+              notificationService.sendEmail({ subject, text }).catch(() => { 
+                try { toast.error("Échec de l'envoi de l'email"); } catch {} 
+              });
+            });
+            
+            // Stocker la valeur précédente pour la tendance
+            if (typeof window !== 'undefined') {
+              localStorage.setItem(`${widget.id}-gauge-prev-value`, String(value));
+              localStorage.setItem(key, String(now));
+            }
           }
         } catch {}
         return (
@@ -369,10 +631,50 @@ export default function WidgetComponent({ widget, onRemove, isDragging }: Widget
             if (now - last > cooldownSec * 1000) {
               const subject = `[${transitionedDown ? 'DOWN' : 'UP'}] ${host?.name || widget.hostId}`;
               const text = `Host: ${host?.name || widget.hostId}\nStatus: ${transitionedDown ? 'Hors ligne' : 'En ligne'}\nWidget: ${widget.title || 'Disponibilité'}`;
-              try { const raw = localStorage.getItem('supervia.notifications') || '[]'; const arr = JSON.parse(raw); arr.push({ id: `${widget.id}-avail-${now}`, title: subject, time: now, body: text, read: false }); localStorage.setItem('supervia.notifications', JSON.stringify(arr)); } catch {}
+              
+              // Notification locale enrichie
+              createEnrichedNotification(
+                widget.id, 
+                'availability', 
+                subject, 
+                text, 
+                host?.name || widget.hostId, 
+                'Disponibilité',
+                'critical'
+              );
+              
               try { toast.success(subject); } catch {}
-              notificationService.sendEmail({ subject, text }).catch(() => { try { toast.error("Échec de l'envoi de l'email"); } catch {} });
-              if (typeof window !== 'undefined') localStorage.setItem(key, String(now));
+              
+              // Alerte enrichie pour changement de disponibilité
+              const downtime = transitionedDown ? localStorage.getItem(`${widget.id}-avail-downtime`) : null;
+              
+              sendEnrichedAlert({
+                widget,
+                hostName: host?.name || widget.hostId || 'Hôte inconnu',
+                metricName: 'Disponibilité',
+                currentValue: transitionedDown ? 'Hors ligne' : 'En ligne',
+                threshold: 'Disponible',
+                condition: transitionedDown ? 'hôte indisponible' : 'hôte de nouveau disponible',
+                additionalContext: {
+                  duration: downtime ? `Indisponible depuis ${Math.round((now - Number(downtime)) / 60000)} minute(s)` : undefined,
+                  trend: transitionedDown ? 'Dégradation' : 'Récupération'
+                }
+              }).catch(() => {
+                // Fallback vers l'ancien système
+                notificationService.sendEmail({ subject, text }).catch(() => { 
+                  try { toast.error("Échec de l'envoi de l'email"); } catch {} 
+                });
+              });
+              
+              // Gérer le tracking du downtime
+              if (typeof window !== 'undefined') {
+                if (transitionedDown) {
+                  localStorage.setItem(`${widget.id}-avail-downtime`, String(now));
+                } else {
+                  localStorage.removeItem(`${widget.id}-avail-downtime`);
+                }
+                localStorage.setItem(key, String(now));
+              }
             }
           }
         } catch {}
@@ -406,7 +708,8 @@ export default function WidgetComponent({ widget, onRemove, isDragging }: Widget
         // Notification simple sur problèmes si activé
         try {
           const cfg: any = widget.config || {};
-          if (cfg.notifyOnProblems) {
+          const hasAlerts = Array.isArray(cfg.alerts) && cfg.alerts.length > 0;
+          if (hasAlerts) {
             const minSev = cfg.problemsMinSeverity || '0';
             const onlyHost = !!cfg.problemsHostOnly;
             const pool = onlyHost && widget.hostId ? problems.filter(p => p.hosts?.some(h => h.hostid === widget.hostId)) : problems;
@@ -419,10 +722,47 @@ export default function WidgetComponent({ widget, onRemove, isDragging }: Widget
             if (count >= threshold && now - last > cooldownSec * 1000) {
               const subject = `[ALERTE] ${count} problème(s) ${onlyHost ? `sur ${host?.name || widget.hostId}` : 'actifs'}`;
               const text = `Widget: ${widget.title || 'Problèmes'}\nScope: ${onlyHost ? (host?.name || widget.hostId) : 'Tous hôtes'}\nSeuil: >= ${threshold} (sev >= ${minSev})\nActuels: ${count}`;
-              try { const raw = localStorage.getItem('supervia.notifications') || '[]'; const arr = JSON.parse(raw); arr.push({ id: `${widget.id}-problems-${now}`, title: subject, time: now, body: text, read: false }); localStorage.setItem('supervia.notifications', JSON.stringify(arr)); } catch {}
+              
+              // Notification locale enrichie
+              createEnrichedNotification(
+                widget.id, 
+                'problems', 
+                subject, 
+                text, 
+                'Tous les hôtes', 
+                'Nombre de problèmes actifs',
+                count >= 5 ? 'critical' : count >= 3 ? 'high' : 'warning'
+              );
+              
               try { toast.success(subject); } catch {}
-              notificationService.sendEmail({ subject, text }).catch(() => { try { toast.error("Échec de l'envoi de l'email"); } catch {} });
-              if (typeof window !== 'undefined') localStorage.setItem(key, String(now));
+              
+              // Alerte enrichie avec détails des problèmes
+              const criticalProblems = hostProblems.filter(p => Number(p.severity) >= 4).length;
+              const highProblems = hostProblems.filter(p => Number(p.severity) >= 3).length;
+              
+              sendEnrichedAlert({
+                widget,
+                hostName: onlyHost ? (host?.name || widget.hostId || 'Hôte inconnu') : 'Tous les hôtes',
+                metricName: 'Nombre de problèmes actifs',
+                currentValue: count,
+                threshold,
+                condition: `seuil de ${threshold} problème(s) atteint`,
+                additionalContext: {
+                  trend: count > (Number(localStorage.getItem(`${widget.id}-problems-prev-count`)) || 0) ? 'En augmentation' : 'Stable ou en diminution',
+                  frequency: `${criticalProblems} critique(s), ${highProblems} élevé(s)`
+                }
+              }).catch(() => {
+                // Fallback vers l'ancien système
+                notificationService.sendEmail({ subject, text }).catch(() => { 
+                  try { toast.error("Échec de l'envoi de l'email"); } catch {} 
+                });
+              });
+              
+              // Stocker le nombre précédent pour la tendance
+              if (typeof window !== 'undefined') {
+                localStorage.setItem(`${widget.id}-problems-prev-count`, String(count));
+                localStorage.setItem(key, String(now));
+              }
             }
           }
         } catch {}
@@ -430,7 +770,10 @@ export default function WidgetComponent({ widget, onRemove, isDragging }: Widget
         return (
           <div className="widget-content flex flex-col h-full p-3" suppressHydrationWarning>
             <div className="widget-title text-muted-foreground mb-3 text-center text-sm font-medium">
-              {widget.hostId ? `Problèmes de ${host?.name ? (host.name.length > 15 ? `${host.name.substring(0, 15)}...` : host.name) : 'Hôte'}` : 'Problèmes récents'}
+              {widget.hostId 
+                ? `Problèmes de ${host?.name ? (host.name.length > 15 ? `${host.name.substring(0, 15)}...` : host.name) : 'Hôte'}` 
+                : `Problèmes récents (${hostProblems.length})`
+              }
             </div>
             {hostProblems.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center">
@@ -452,28 +795,68 @@ export default function WidgetComponent({ widget, onRemove, isDragging }: Widget
                   </div>
                 </div>
                 <div className="flex-1 space-y-2 overflow-y-auto">
-                  {hostProblems.slice(0, 2).map((problem) => (
-                    <div key={problem.eventid} className="p-2 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-                      <div className="font-medium text-red-800 dark:text-red-300 text-xs leading-tight" title={problem.name}>
-                        {problem.name.length > 30 ? `${problem.name.substring(0, 30)}...` : problem.name}
+                  {hostProblems.slice(0, 3).map((problem) => {
+                    // Récupérer le nom de l'hôte source du problème
+                    const problemHost = problem.hosts?.[0];
+                    const problemHostName = problemHost ? (hostNameById[problemHost.hostid] || problemHost.host || problemHost.name || 'Hôte inconnu') : 'Hôte inconnu';
+                    
+                    // Déterminer la couleur selon la sévérité
+                    const getSeverityColor = (severity: string) => {
+                      const sev = Number(severity);
+                      if (sev >= 4) return 'bg-red-100 dark:bg-red-900/30 border-red-300 dark:border-red-700 text-red-800 dark:text-red-300';
+                      if (sev >= 3) return 'bg-orange-100 dark:bg-orange-900/30 border-orange-300 dark:border-orange-700 text-orange-800 dark:text-orange-300';
+                      if (sev >= 2) return 'bg-yellow-100 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-700 text-yellow-800 dark:text-yellow-300';
+                      return 'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-300';
+                    };
+                    
+                    const getSeverityIcon = (severity: string) => {
+                      const sev = Number(severity);
+                      if (sev >= 4) return '🚨';
+                      if (sev >= 3) return '⚠️';
+                      if (sev >= 2) return '⚡';
+                      return 'ℹ️';
+                    };
+                    
+                    const getSeverityLabel = (severity: string) => {
+                      const sev = Number(severity);
+                      if (sev >= 4) return 'Critique';
+                      if (sev >= 3) return 'Élevée';
+                      if (sev >= 2) return 'Moyenne';
+                      return 'Info';
+                    };
+                    
+                    return (
+                      <div key={problem.eventid} className={`p-3 rounded-lg border transition-all hover:shadow-sm ${getSeverityColor(problem.severity)}`}>
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <div className="font-medium text-xs leading-tight flex-1" title={problem.name}>
+                            {problem.name.length > 35 ? `${problem.name.substring(0, 35)}...` : problem.name}
+                          </div>
+                          <div className="text-xs opacity-75">
+                            {getSeverityIcon(problem.severity)}
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-1 opacity-80">
+                            <span>📡</span>
+                            <span className="truncate max-w-[80px]" title={problemHostName}>
+                              {problemHostName.length > 12 ? `${problemHostName.substring(0, 12)}...` : problemHostName}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 opacity-80">
+                            <span className="inline-block w-1.5 h-1.5 rounded-full bg-current"></span>
+                            <span>{getSeverityLabel(problem.severity)}</span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-red-600 dark:text-red-400 text-xs mt-1 flex items-center">
-                        <span className="inline-block w-2 h-2 bg-red-500 rounded-full mr-1"></span>
-                        Sévérité: {problem.severity}
-                      </div>
-                    </div>
-                  ))}
-                  {hostProblems.length > 2 && (
-                    <div className="text-xs text-center text-muted-foreground p-2 bg-gray-50 dark:bg-gray-800 rounded">
-                      +{hostProblems.length - 2} autres problèmes
+                    );
+                  })}
+                  {hostProblems.length > 3 && (
+                    <div className="text-xs text-center text-muted-foreground p-2 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                      <span className="font-medium">+{hostProblems.length - 3}</span> autres problèmes
+                      <div className="text-[10px] mt-1 opacity-75">Voir tout →</div>
                     </div>
                   )}
                 </div>
-                {hostProblems.length > 2 && (
-                  <div className="mt-2 text-center">
-                    <a className="text-xs text-blue-600 hover:underline" href="/dashboard?tab=problems">Voir plus</a>
-                  </div>
-                )}
               </>
             )}
           </div>

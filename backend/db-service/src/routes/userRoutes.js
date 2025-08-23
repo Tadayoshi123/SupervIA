@@ -1,6 +1,6 @@
 // backend/db-service/src/routes/userRoutes.js
 const express = require('express');
-const { getAllUsers, createUser, getUserByEmail } = require('../controllers/userController');
+const { getAllUsers, createUser, getUserByEmail, getUserByEmailInternal } = require('../controllers/userController');
 
 const router = express.Router();
 
@@ -17,6 +17,8 @@ const router = express.Router();
  *   get:
  *     summary: Récupère la liste de tous les utilisateurs
  *     tags: [Users]
+ *     security:
+ *       - internalApiKey: []
  *     responses:
  *       200:
  *         description: La liste des utilisateurs
@@ -26,6 +28,8 @@ const router = express.Router();
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Clé API interne manquante ou invalide
  */
 router.get('/users', getAllUsers);
 
@@ -35,6 +39,8 @@ router.get('/users', getAllUsers);
  *   post:
  *     summary: Crée un nouvel utilisateur
  *     tags: [Users]
+ *     security:
+ *       - internalApiKey: []
  *     requestBody:
  *       required: true
  *       content:
@@ -58,6 +64,8 @@ router.get('/users', getAllUsers);
  *         description: Données manquantes
  *       409:
  *         description: L'email existe déjà
+ *       401:
+ *         description: Clé API interne manquante ou invalide
  */
 router.post('/users', createUser);
 
@@ -67,6 +75,8 @@ router.post('/users', createUser);
  *   get:
  *     summary: Récupère un utilisateur par son email
  *     tags: [Users]
+ *     security:
+ *       - internalApiKey: []
  *     parameters:
  *       - in: path
  *         name: email
@@ -83,8 +93,35 @@ router.post('/users', createUser);
  *               $ref: '#/components/schemas/User'
  *       404:
  *         description: Utilisateur non trouvé
+ *       401:
+ *         description: Clé API interne manquante ou invalide
  */
 router.get('/users/email/:email', getUserByEmail);
+
+/**
+ * @swagger
+ * /api/internal/users/email/{email}:
+ *   get:
+ *     summary: [INTERNE] Récupère un utilisateur par email (incluant le hash du mot de passe)
+ *     description: Endpoint réservé aux appels inter-services avec clé interne. Ne pas exposer publiquement.
+ *     tags: [Users]
+ *     security:
+ *       - internalApiKey: []
+ *     parameters:
+ *       - in: path
+ *         name: email
+ *         schema:
+ *           type: string
+ *         required: true
+ *     responses:
+ *       200:
+ *         description: L'utilisateur trouvé (incluant password)
+ *       404:
+ *         description: Utilisateur non trouvé
+ *       401:
+ *         description: Clé API interne manquante ou invalide
+ */
+router.get('/internal/users/email/:email', getUserByEmailInternal);
 
 // Définition du schéma pour la documentation (non utilisé directement dans le code)
 /**

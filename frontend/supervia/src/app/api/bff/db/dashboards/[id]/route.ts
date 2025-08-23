@@ -38,7 +38,14 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
     method: 'DELETE',
     headers: { 'X-Internal-Api-Key': process.env.INTERNAL_API_KEY as string }
   });
-  return NextResponse.json(null, { status: upstream.status });
+  
+  // Pour les réponses 204 (No Content), on ne peut pas utiliser .json()
+  if (upstream.status === 204) {
+    return new NextResponse(null, { status: 204 });
+  }
+  
+  const data = await upstream.json().catch(() => ({}));
+  return NextResponse.json(data, { status: upstream.status });
 }
 
 

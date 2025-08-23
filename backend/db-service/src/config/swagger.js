@@ -14,6 +14,19 @@ const swaggerDefinition = {
       description: 'Serveur de développement',
     },
   ],
+  components: {
+    securitySchemes: {
+      internalApiKey: {
+        type: 'apiKey',
+        in: 'header',
+        name: 'X-Internal-Api-Key',
+        description: 'Clé API interne requise pour toutes les routes /api du db-service',
+      },
+    },
+  },
+  security: [
+    { internalApiKey: [] },
+  ],
 };
 
 const options = {

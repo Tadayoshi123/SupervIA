@@ -1,20 +1,13 @@
 // backend/notification-service/src/index.js
-const express = require('express');
 const http = require('http');
 const { Server } = require("socket.io");
 const dotenv = require('dotenv');
-const cors = require('cors');
-const helmet = require('helmet');
-const swaggerUi = require('swagger-ui-express');
-const swaggerSpec = require('./config/swagger');
 const logger = require('./config/logger');
-const errorHandler = require('./middleware/errorHandler');
-const notificationRoutes = require('./routes/notificationRoutes');
-const rateLimit = require('express-rate-limit');
+const { buildApp } = require('./app');
 
 dotenv.config();
 
-const app = express();
+const app = buildApp();
 const server = http.createServer(app);
 
 const io = new Server(server, {
@@ -28,36 +21,6 @@ const io = new Server(server, {
 app.set('io', io);
 
 const port = process.env.PORT || 3000;
-
-// Middleware pour la documentation Swagger
-app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-
-// Middlewares de base
-app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:3000",
-  credentials: true,
-  methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-}));
-app.use(helmet());
-app.use(express.json({ limit: '1mb' }));
-
-// Rate limiting pour l'envoi d'emails
-const notifLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  limit: 20,
-  standardHeaders: 'draft-7',
-  legacyHeaders: false,
-});
-app.use('/api/notifications', notifLimiter);
-
-// Endpoint de health check
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'UP', service: 'notification-service' });
-});
-
-// Utilisation des routes
-app.use('/api/notifications', notificationRoutes);
 
 // Gestion des connexions Socket.io
 // Auth Socket.io par JWT (si fourni dans l'auth header du handshake)
@@ -86,9 +49,6 @@ io.on('connection', (socket) => {
     logger.info(`Socket ${socket.id} a rejoint la room ${room}`);
   });
 });
-
-// Middleware de gestion des erreurs (doit être le dernier)
-app.use(errorHandler);
 
 // Démarrage du serveur
 server.listen(port, () => {

@@ -81,8 +81,15 @@ const login = async (req, res, next) => {
       throw error;
     }
 
-    const userResponse = await axios.get(`${DB_SERVICE_URL}/api/users/email/${email}`, internalApiConfig);
+    // Utiliser l'endpoint interne qui inclut le hash du mot de passe
+    const userResponse = await axios.get(`${DB_SERVICE_URL}/api/internal/users/email/${encodeURIComponent(email)}`, internalApiConfig);
     const user = userResponse.data;
+
+    if (!user || !user.password) {
+      const error = new Error('Invalid credentials');
+      error.statusCode = 401;
+      throw error;
+    }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
@@ -99,7 +106,7 @@ const login = async (req, res, next) => {
       token: token, // Suppression du préfixe "Bearer " pour éviter les problèmes
     });
   } catch (error) {
-    if (error.response && error.response.status === 404) {
+    if (error.response && (error.response.status === 404 || error.response.status === 401)) {
       error.statusCode = 401;
       error.message = 'Invalid credentials';
     }

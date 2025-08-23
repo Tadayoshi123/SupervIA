@@ -95,7 +95,16 @@ const swaggerDefinition = {
       },
       SummarizeRequest: {
         type: 'object',
-        properties: { problemsCount: { type: 'number' }, hostsOnline: { type: 'number' }, hostsTotal: { type: 'number' } }
+        properties: { 
+          problemsCount: { type: 'number' }, 
+          hostsOnline: { type: 'number' }, 
+          hostsTotal: { type: 'number' },
+          problems: { type: 'array', items: { type: 'object' }, description: 'Liste des problèmes détectés avec sévérité' },
+          widgets: { type: 'array', items: { type: 'object' }, description: 'Widgets actifs du dashboard' },
+          topMetrics: { type: 'array', items: { type: 'object' }, description: 'Métriques principales avec valeurs' },
+          dashboardStats: { type: 'object', description: 'Statistiques du dashboard' },
+          timeRange: { type: 'string', description: 'Période d\'analyse', default: '1h' }
+        }
       },
       SummarizeResponse: {
         type: 'object',

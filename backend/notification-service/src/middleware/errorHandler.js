@@ -2,19 +2,22 @@
 const logger = require('../config/logger');
 
 const errorHandler = (err, req, res, next) => {
-  logger.error(
-    {
-      message: err.message,
-      stack: err.stack,
-      url: req.originalUrl,
-      method: req.method,
-      ip: req.ip,
-      statusCode: err.statusCode,
-    },
-    'Une erreur non gérée est survenue dans le notification-service'
-  );
-
   const statusCode = err.statusCode || 500;
+  const payload = {
+    message: err.message,
+    url: req.originalUrl,
+    method: req.method,
+    ip: req.ip,
+    statusCode,
+    ...(statusCode >= 500 ? { stack: err.stack } : {}),
+  };
+
+  if (statusCode >= 500) {
+    logger.error(payload, 'Une erreur non gérée est survenue dans le notification-service');
+  } else {
+    logger.warn(payload, 'Erreur cliente gérée dans le notification-service');
+  }
+
   const message = err.statusCode ? err.message : 'Internal Server Error';
 
   res.status(statusCode).json({

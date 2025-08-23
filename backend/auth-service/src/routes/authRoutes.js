@@ -39,6 +39,10 @@ const router = express.Router();
  *         description: Utilisateur créé
  *       409:
  *         description: L'email existe déjà
+ *       400:
+ *         description: Email et mot de passe requis
+ *       429:
+ *         description: Trop de requêtes (rate limit)
  */
 router.post('/register', register);
 
@@ -67,6 +71,10 @@ router.post('/register', register);
  *         description: Connexion réussie, token retourné
  *       401:
  *         description: Identifiants invalides
+ *       400:
+ *         description: Email et mot de passe requis
+ *       429:
+ *         description: Trop de requêtes (rate limit)
  */
 router.post('/login', login);
 

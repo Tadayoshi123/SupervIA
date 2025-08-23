@@ -63,7 +63,7 @@ const createUser = async (req, res, next) => {
   }
 };
 
-// Récupérer un utilisateur par son email
+// Récupérer un utilisateur par son email (public: sans mot de passe)
 const getUserByEmail = async (req, res, next) => {
   try {
     const { email } = req.params;
@@ -93,8 +93,30 @@ const getUserByEmail = async (req, res, next) => {
   }
 };
 
+// Route strictement interne: retourne aussi le hash du mot de passe
+const getUserByEmailInternal = async (req, res, next) => {
+  try {
+    const { email } = req.params;
+    const user = await prisma.user.findUnique({
+      where: { email },
+      // Pas de select => inclut password pour usage interne (auth-service uniquement)
+    });
+
+    if (!user) {
+      const error = new Error('User not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    res.status(200).json(user);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getAllUsers,
   createUser,
   getUserByEmail,
+  getUserByEmailInternal,
 };

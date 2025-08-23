@@ -40,8 +40,26 @@ const predict = async (series: TimePoint[], horizon = 5) => {
   return res.data as { slope: number; forecast: Array<{ index: number; value: number }> };
 };
 
-const summarize = async (problemsCount = 0, hostsOnline = 0, hostsTotal = 0) => {
-  const res = await axios.post(`${AI_API_URL}/summarize`, { problemsCount, hostsOnline, hostsTotal }, { headers: createAuthHeaders() });
+const summarize = async (
+  problemsCount = 0, 
+  hostsOnline = 0, 
+  hostsTotal = 0,
+  problems: any[] = [],
+  widgets: any[] = [],
+  topMetrics: any[] = [],
+  dashboardStats: any = {},
+  timeRange = '1h'
+) => {
+  const res = await axios.post(`${AI_API_URL}/summarize`, { 
+    problemsCount, 
+    hostsOnline, 
+    hostsTotal,
+    problems,
+    widgets,
+    topMetrics,
+    dashboardStats,
+    timeRange
+  }, { headers: createAuthHeaders() });
   return res.data as { text: string };
 };
 

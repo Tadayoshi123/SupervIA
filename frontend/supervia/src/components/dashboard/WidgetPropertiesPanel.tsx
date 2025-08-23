@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { useAppSelector } from '@/lib/hooks';
 import { selectHosts, selectItemsForHost } from '@/lib/features/metrics/metricsSlice';
 import { Widget } from '@/types/dashboard';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Settings, Type, Server, Clock, Eye, BarChart3, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Settings, Type, Server, Clock, Eye, BarChart3, ToggleLeft, ToggleRight, Paintbrush } from 'lucide-react';
 
 type Props = {
   widget: Widget | null;
@@ -19,6 +19,24 @@ export default function WidgetPropertiesPanel({ widget, onChange }: Props) {
   const items = useAppSelector(selectItemsForHost(widget?.hostId || ''));
   // Timers de debounce pour le color picker (clé = itemid)
   const colorTimersRef = useRef<Record<string, ReturnType<typeof setTimeout> | undefined>>({});
+  
+  // Carte globale pour récupérer les noms de métriques et d'hôtes de tous les hôtes
+  const allItemsByHost = useAppSelector((state) => (state as any).metrics.items as Record<string, any[]>);
+  const { itemLabelById, itemHostIdByItemId, hostNameById } = useMemo(() => {
+    const labelMap: Record<string, string> = {};
+    const hostIdByItem: Record<string, string> = {};
+    const hostNameMap: Record<string, string> = {};
+    (hosts || []).forEach((h: any) => { hostNameMap[h.hostid] = h.name || h.host || String(h.hostid); });
+    if (allItemsByHost) {
+      Object.values(allItemsByHost).forEach((arr) => {
+        (arr || []).forEach((it: any) => {
+          labelMap[it.itemid] = it.name || it.key_ || String(it.itemid);
+          if (it.hostid) hostIdByItem[it.itemid] = it.hostid;
+        });
+      });
+    }
+    return { itemLabelById: labelMap, itemHostIdByItemId: hostIdByItem, hostNameById: hostNameMap };
+  }, [allItemsByHost, hosts]);
 
   const [localTitle, setLocalTitle] = useState(widget?.title || '');
   useEffect(() => setLocalTitle(widget?.title || ''), [widget?.title]);
@@ -54,9 +72,7 @@ export default function WidgetPropertiesPanel({ widget, onChange }: Props) {
         series: Array.isArray(widget.config?.series) ? (widget.config?.series as string[]) : [],
         timeRangeSec: (widget.config?.timeRangeSec as number) || 3600,
         refreshSec: (widget.config?.refreshSec as number) || 0,
-        showForecast: widget.config?.showForecast !== false,
-        forecastColor: (widget.config?.forecastColor as string) || '#94a3b8',
-        forecastPoints: Array.isArray(widget.config?.forecastPoints) ? widget.config?.forecastPoints : [],
+
         seriesColors: widget.config?.seriesColors || {}
       };
     } else if (type === 'gauge') {
@@ -321,6 +337,50 @@ export default function WidgetPropertiesPanel({ widget, onChange }: Props) {
                 })}
               </div>
             </div>
+
+            {/* Personnalisation des couleurs des séries */}
+            {Array.isArray(widget.config?.series) && (widget.config.series as string[]).length > 0 && (
+              <div className="space-y-3">
+                <h5 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                  <Paintbrush className="h-4 w-4" />
+                  Couleurs des métriques
+                </h5>
+                <div className="space-y-2">
+                  {(widget.config.series as string[]).slice(0, 5).map((seriesId, index) => {
+                    const currentColor = (widget.config?.seriesColors as Record<string, string>)?.[seriesId] || 
+                                       ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6'][index % 5];
+                    
+                    // Utiliser les données globales pour récupérer le nom de la métrique et de l'hôte
+                    const metricName = itemLabelById[seriesId] || `Métrique ${index + 1}`;
+                    const hostId = itemHostIdByItemId[seriesId];
+                    const hostName = hostId ? hostNameById[hostId] : 'Hôte inconnu';
+                    
+                    return (
+                      <div key={seriesId} className="flex items-center gap-3 p-2 bg-gray-50 dark:bg-gray-800 rounded">
+                        <input
+                          type="color"
+                          value={currentColor}
+                          onChange={(e) => {
+                            const newSeriesColors = { ...(widget.config?.seriesColors as Record<string, string> || {}) };
+                            newSeriesColors[seriesId] = e.target.value;
+                            setConfig({ seriesColors: newSeriesColors });
+                          }}
+                          className="w-8 h-8 rounded border border-gray-300 dark:border-gray-600 cursor-pointer"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                            {metricName}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                            📡 {hostName}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -362,75 +422,7 @@ export default function WidgetPropertiesPanel({ widget, onChange }: Props) {
           </div>
         )}
 
-        {/* Configuration prévision */}
-        {widget.type === 'multiChart' && (
-          <div className="space-y-4">
-            <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
-              <Eye className="h-4 w-4" />
-              Prévision
-            </h4>
-            
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Afficher les prévisions</span>
-                <button
-                  onClick={() => setConfig({ showForecast: !(widget.config?.showForecast !== false) })}
-                  className="relative inline-flex items-center"
-                >
-                  {widget.config?.showForecast !== false ? (
-                    <ToggleRight className="h-6 w-6 text-cyan-600" />
-                  ) : (
-                    <ToggleLeft className="h-6 w-6 text-gray-400" />
-                  )}
-                </button>
-              </div>
 
-              {widget.config?.showForecast !== false && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Couleur des prévisions
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={widget.config?.forecastColor as string || '#94a3b8'}
-                      onChange={(e) => {
-                        const color = e.target.value;
-                        const timerId = 'forecast';
-                        if (colorTimersRef.current[timerId]) {
-                          clearTimeout(colorTimersRef.current[timerId]);
-                        }
-                        colorTimersRef.current[timerId] = setTimeout(() => {
-                          setConfig({ forecastColor: color });
-                        }, 300);
-                      }}
-                      className="w-12 h-8 rounded border border-gray-300 dark:border-gray-600"
-                    />
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      {widget.config?.forecastColor as string || '#94a3b8'}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {Array.isArray(widget.config?.forecastPoints) && (widget.config?.forecastPoints as any[]).length > 0 && (
-                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <p className="text-sm text-blue-700 dark:text-blue-300">
-                    ✨ {(widget.config?.forecastPoints as any[]).length} point(s) de prévision disponible(s)
-                  </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setConfig({ forecastPoints: [], showForecast: false })}
-                    className="mt-2 text-xs"
-                  >
-                    Effacer les prévisions
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
 
         {/* Informations de debug */}
         <div className="pt-4 border-t border-gray-200 dark:border-gray-700">

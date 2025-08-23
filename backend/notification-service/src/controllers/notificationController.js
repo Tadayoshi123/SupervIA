@@ -59,6 +59,220 @@ const sendTestEmail = async (req, res, next) => {
   }
 };
 
+/**
+ * Envoie un email d'alerte enrichi avec template HTML professionnel
+ * 
+ * Cette fonction génère et envoie des emails d'alerte contextualisés pour les widgets
+ * de supervision. Elle inclut une analyse automatique de sévérité, des templates HTML
+ * responsives, et des informations contextuelles avancées (tendances, durée, etc.).
+ * 
+ * @param {Object} req - Requête Express contenant les données d'alerte
+ * @param {string} req.body.alertType - Type de widget (gauge, multiChart, availability, problems, metricValue)
+ * @param {string} req.body.severity - Niveau de sévérité (critical, high, medium, warning, info)
+ * @param {string} req.body.widgetTitle - Titre du widget qui a déclenché l'alerte
+ * @param {string} req.body.hostName - Nom de l'hôte concerné par l'alerte
+ * @param {string} req.body.metricName - Nom de la métrique surveillée
+ * @param {string} req.body.currentValue - Valeur actuelle qui a déclenché l'alerte
+ * @param {string} req.body.threshold - Seuil configuré pour l'alerte
+ * @param {string} req.body.units - Unité de mesure (%, MB, etc.)
+ * @param {string} req.body.condition - Description de la condition de déclenchement
+ * @param {string} req.body.timestamp - Horodatage ISO de l'alerte
+ * @param {string} req.body.dashboardUrl - URL vers le dashboard concerné
+ * @param {Object} req.body.additionalContext - Contexte additionnel (tendance, durée, fréquence)
+ * @param {Object} res - Réponse Express
+ * @param {Function} next - Middleware suivant pour gestion d'erreurs
+ */
+const sendAlertEmail = async (req, res, next) => {
+  const { 
+    alertType, 
+    severity = 'warning',
+    widgetTitle,
+    hostName,
+    metricName,
+    currentValue,
+    threshold,
+    units = '',
+    condition,
+    timestamp,
+    dashboardUrl,
+    additionalContext = {}
+  } = req.body;
+
+  try {
+    if (!alertType || !widgetTitle || !hostName || !metricName) {
+      const error = new Error('Paramètres requis manquants pour l\'alerte. Fournissez au minimum: alertType, widgetTitle, hostName, metricName.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const defaultTo = process.env.NOTIF_DEFAULT_TO || '';
+    if (!defaultTo) {
+      const error = new Error('Aucun destinataire configuré pour les alertes (NOTIF_DEFAULT_TO manquant).');
+      error.statusCode = 500;
+      throw error;
+    }
+
+    /**
+     * Détermine l'icône, la couleur et le label selon le niveau de sévérité
+     * 
+     * Cette fonction mappe les niveaux de sévérité aux éléments visuels utilisés
+     * dans les templates HTML et les notifications. Les couleurs suivent les
+     * conventions UX standard (rouge = critique, orange = élevé, etc.).
+     * 
+     * @param {string} sev - Niveau de sévérité (critical, high, medium, warning, info)
+     * @returns {Object} Objet contenant icon (emoji), color (hex), label (texte)
+     */
+    const getSeverityInfo = (sev) => {
+      switch (sev.toLowerCase()) {
+        case 'critical': return { icon: '🚨', color: '#dc2626', label: 'CRITIQUE' };
+        case 'high': return { icon: '⚠️', color: '#ea580c', label: 'ÉLEVÉE' };
+        case 'medium': return { icon: '⚡', color: '#d97706', label: 'MOYENNE' };
+        case 'warning': return { icon: '⚠️', color: '#ca8a04', label: 'ATTENTION' };
+        case 'info': return { icon: 'ℹ️', color: '#2563eb', label: 'INFO' };
+        default: return { icon: '⚠️', color: '#6b7280', label: 'ALERTE' };
+      }
+    };
+
+    const severityInfo = getSeverityInfo(severity);
+    const formattedTimestamp = timestamp ? new Date(timestamp).toLocaleString('fr-FR') : new Date().toLocaleString('fr-FR');
+    
+    // Construire le sujet enrichi avec icône et niveau de sévérité
+    const subject = `${severityInfo.icon} [${severityInfo.label}] ${widgetTitle} - ${hostName}`;
+    
+    // Construire le texte enrichi pour les clients email sans support HTML
+    const contextLines = [];
+    if (additionalContext.trend) contextLines.push(`Tendance: ${additionalContext.trend}`);
+    if (additionalContext.duration) contextLines.push(`Durée: ${additionalContext.duration}`);
+    if (additionalContext.previousValue) contextLines.push(`Valeur précédente: ${additionalContext.previousValue}${units}`);
+    if (additionalContext.frequency) contextLines.push(`Fréquence d'alerte: ${additionalContext.frequency}`);
+    
+    const text = `ALERTE SUPERVIA - ${severityInfo.label}
+
+📊 Widget: ${widgetTitle}
+🖥️  Hôte: ${hostName}
+📈 Métrique: ${metricName}
+⚡ Valeur actuelle: ${currentValue}${units}
+🎯 Seuil: ${condition || 'dépassé'} ${threshold}${units}
+🕐 Horodatage: ${formattedTimestamp}
+
+${contextLines.length > 0 ? '📋 Contexte additionnel:\n' + contextLines.map(line => `• ${line}`).join('\n') + '\n' : ''}
+${dashboardUrl ? `🔗 Voir le dashboard: ${dashboardUrl}\n` : ''}
+---
+Cette alerte a été générée automatiquement par SupervIA.
+Pour désactiver ces notifications, modifiez les paramètres de votre widget.`;
+
+    /**
+     * Template HTML responsive et moderne pour les emails d'alerte
+     * 
+     * Ce template utilise un design professionnel avec :
+     * - Header coloré selon la sévérité
+     * - Sections organisées (détails, contexte, actions)
+     * - Design responsive pour mobile et desktop
+     * - Couleurs et icônes cohérentes avec l'interface SupervIA
+     */
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Alerte SupervIA - ${severityInfo.label}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1f2937; background: #f9fafb; margin: 0; padding: 20px; }
+    .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+    .header { background: linear-gradient(135deg, ${severityInfo.color}, ${severityInfo.color}dd); color: white; padding: 24px; text-align: center; }
+    .header h1 { margin: 0; font-size: 24px; font-weight: 600; }
+    .severity-badge { display: inline-block; background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 14px; margin-top: 8px; }
+    .content { padding: 24px; }
+    .alert-details { background: #f8fafc; border-left: 4px solid ${severityInfo.color}; padding: 16px; margin: 16px 0; border-radius: 0 8px 8px 0; }
+    .detail-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb; }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-label { font-weight: 500; color: #6b7280; }
+    .detail-value { font-weight: 600; color: #1f2937; }
+    .context-section { margin-top: 20px; padding: 16px; background: #fef3c7; border-radius: 8px; border: 1px solid #fbbf24; }
+    .context-title { font-weight: 600; color: #92400e; margin-bottom: 8px; }
+    .context-list { margin: 0; padding-left: 20px; }
+    .context-list li { margin: 4px 0; color: #78350f; }
+    .action-button { display: inline-block; background: ${severityInfo.color}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500; margin-top: 16px; }
+    .footer { background: #f1f5f9; padding: 16px 24px; text-align: center; font-size: 12px; color: #6b7280; }
+    .timestamp { font-size: 14px; color: #6b7280; margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>${severityInfo.icon} Alerte SupervIA</h1>
+      <div class="severity-badge">${severityInfo.label}</div>
+    </div>
+    
+    <div class="content">
+      <div class="alert-details">
+        <div class="detail-row">
+          <span class="detail-label">📊 Widget</span>
+          <span class="detail-value">${widgetTitle}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">🖥️ Hôte</span>
+          <span class="detail-value">${hostName}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">📈 Métrique</span>
+          <span class="detail-value">${metricName}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">⚡ Valeur actuelle</span>
+          <span class="detail-value" style="color: ${severityInfo.color}; font-size: 18px;">${currentValue}${units}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">🎯 Seuil</span>
+          <span class="detail-value">${condition || 'dépassé'} ${threshold}${units}</span>
+        </div>
+      </div>
+
+      ${contextLines.length > 0 ? `
+      <div class="context-section">
+        <div class="context-title">📋 Informations complémentaires</div>
+        <ul class="context-list">
+          ${contextLines.map(line => `<li>${line}</li>`).join('')}
+        </ul>
+      </div>` : ''}
+
+      ${dashboardUrl ? `<a href="${dashboardUrl}" class="action-button">🔗 Voir le dashboard</a>` : ''}
+      
+      <div class="timestamp">🕐 ${formattedTimestamp}</div>
+    </div>
+    
+    <div class="footer">
+      Cette alerte a été générée automatiquement par SupervIA.<br>
+      Pour modifier vos préférences de notification, accédez aux paramètres de votre widget.
+    </div>
+  </div>
+</body>
+</html>`;
+
+    logger.info(`Envoi d'une alerte ${severity} pour ${widgetTitle} sur ${hostName}`);
+    await sendEmail({ to: defaultTo, subject, text, html });
+
+    // Émission d'un événement socket pour les notifications temps réel
+    const io = req.app.get('io');
+    io.emit('alert-notification', { 
+      type: alertType,
+      severity,
+      widgetTitle,
+      hostName,
+      metricName,
+      currentValue,
+      threshold,
+      units,
+      timestamp: formattedTimestamp,
+      subject
+    });
+
+    res.status(200).json({ message: 'Alerte envoyée avec succès.' });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const sendWelcomeEmail = async (req, res, next) => {
   const { to, name } = req.body;
 
@@ -158,5 +372,6 @@ L'équipe SupervIA`;
 
 module.exports = {
   sendTestEmail,
+  sendAlertEmail,
   sendWelcomeEmail,
 };

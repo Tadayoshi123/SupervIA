@@ -62,42 +62,53 @@ const findOrCreateUser = async (profile) => {
 };
 
 
-passport.use(
-  new GoogleStrategy(
-    {
-      clientID: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: `${process.env.AUTH_SERVICE_URL || 'http://localhost:3002'}/auth/google/callback`,
-    },
-    async (accessToken, refreshToken, profile, done) => {
-      try {
-        const user = await findOrCreateUser(profile);
-        return done(null, user);
-      } catch (error) {
-        return done(error, null);
+// En environnement de test ou si variables OAuth manquantes, on saute l'enregistrement des stratégies
+const hasGoogle = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+if (hasGoogle) {
+  passport.use(
+    new GoogleStrategy(
+      {
+        clientID: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        callbackURL: `${process.env.AUTH_SERVICE_URL || 'http://localhost:3002'}/auth/google/callback`,
+      },
+      async (accessToken, refreshToken, profile, done) => {
+        try {
+          const user = await findOrCreateUser(profile);
+          return done(null, user);
+        } catch (error) {
+          return done(error, null);
+        }
       }
-    }
-  )
-);
+    )
+  );
+} else {
+  logger.warn('OAuth Google non configuré (variables manquantes). Stratégie ignorée.');
+}
 
-passport.use(
-  new GitHubStrategy(
-    {
-      clientID: process.env.GITHUB_CLIENT_ID,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET,
-      callbackURL: `${process.env.AUTH_SERVICE_URL || 'http://localhost:3002'}/auth/github/callback`,
-      scope: ['user:email'],
-    },
-    async (accessToken, refreshToken, profile, done) => {
-      try {
-        const user = await findOrCreateUser(profile);
-        return done(null, user);
-      } catch (error) {
-        return done(error, null);
+const hasGithub = Boolean(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET);
+if (hasGithub) {
+  passport.use(
+    new GitHubStrategy(
+      {
+        clientID: process.env.GITHUB_CLIENT_ID,
+        clientSecret: process.env.GITHUB_CLIENT_SECRET,
+        callbackURL: `${process.env.AUTH_SERVICE_URL || 'http://localhost:3002'}/auth/github/callback`,
+        scope: ['user:email'],
+      },
+      async (accessToken, refreshToken, profile, done) => {
+        try {
+          const user = await findOrCreateUser(profile);
+          return done(null, user);
+        } catch (error) {
+          return done(error, null);
+        }
       }
-    }
-  )
-);
+    )
+  );
+} else {
+  logger.warn('OAuth GitHub non configuré (variables manquantes). Stratégie ignorée.');
+}
 
 passport.serializeUser((user, done) => {
   // On ne stocke que l'ID dans la session

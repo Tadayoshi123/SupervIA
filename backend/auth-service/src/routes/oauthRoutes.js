@@ -14,9 +14,29 @@ const generateToken = (user) => {
   });
 };
 
+/**
+ * @swagger
+ * /auth/google:
+ *   get:
+ *     summary: Démarre l'authentification Google (OAuth 2.0)
+ *     tags: [Authentication]
+ *     responses:
+ *       302:
+ *         description: Redirection vers Google
+ */
 // Route pour démarrer l'authentification Google
 router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 
+/**
+ * @swagger
+ * /auth/google/callback:
+ *   get:
+ *     summary: Callback OAuth Google
+ *     tags: [Authentication]
+ *     responses:
+ *       302:
+ *         description: Redirection vers le frontend avec token en query
+ */
 // Route de callback pour Google
 router.get(
   '/google/callback',
@@ -33,9 +53,29 @@ router.get(
   }
 );
 
+/**
+ * @swagger
+ * /auth/github:
+ *   get:
+ *     summary: Démarre l'authentification GitHub (OAuth 2.0)
+ *     tags: [Authentication]
+ *     responses:
+ *       302:
+ *         description: Redirection vers GitHub
+ */
 // Route pour démarrer l'authentification GitHub
 router.get('/github', passport.authenticate('github', { scope: ['user:email'] }));
 
+/**
+ * @swagger
+ * /auth/github/callback:
+ *   get:
+ *     summary: Callback OAuth GitHub
+ *     tags: [Authentication]
+ *     responses:
+ *       302:
+ *         description: Redirection vers le frontend avec token en query
+ */
 // Route de callback pour GitHub
 router.get(
   '/github/callback',

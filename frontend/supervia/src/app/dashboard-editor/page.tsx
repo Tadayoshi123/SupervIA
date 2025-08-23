@@ -47,6 +47,8 @@ function DashboardEditorPageInner() {
   const editorRef = useRef<HTMLDivElement | null>(null);
   const [isPreviewMode, setIsPreviewMode] = useState<boolean>(false);
   const [density, setDensity] = useState<'compact'|'spacious'>('spacious');
+  const [selectedHostId, setSelectedHostId] = useState<string>('');
+  const [refreshIntervalSec, setRefreshIntervalSec] = useState<number>(30); // 30s par défaut
   
   // Grille adaptative selon le mode d'affichage
   const gridCols = useMemo(() => {
@@ -145,6 +147,25 @@ function DashboardEditorPageInner() {
       dispatch(fetchHosts());
     }
   }, [dispatch, isAuthenticated]);
+
+  // Fonction pour rafraîchir les données des widgets
+  const refreshWidgetData = async () => {
+    const hostIds = [...new Set(widgets.map(w => w.hostId).filter(Boolean))] as string[];
+    for (const hostId of hostIds) {
+      dispatch(fetchItemsForHost(hostId));
+    }
+  };
+
+  // Auto-refresh des données des widgets
+  useEffect(() => {
+    if (!refreshIntervalSec || widgets.length === 0) return;
+    
+    const id = setInterval(() => {
+      refreshWidgetData();
+    }, refreshIntervalSec * 1000);
+    
+    return () => clearInterval(id);
+  }, [refreshIntervalSec, widgets, dispatch]);
 
   // Charger les items pour chaque hôte
   useEffect(() => {
@@ -502,8 +523,10 @@ function DashboardEditorPageInner() {
                 <select
                   aria-label="Filtrer par hôte"
                   className="h-9 min-w-[180px] border rounded-md px-3 bg-background text-foreground"
+                  value={selectedHostId}
                   onChange={(e) => {
                     const hostId = e.target.value;
+                    setSelectedHostId(hostId);
                     const none = !hostId;
                     const container = editorRef.current;
                     if (!container) return;
@@ -517,6 +540,28 @@ function DashboardEditorPageInner() {
                   <option value="">Tous les hôtes</option>
                   {hosts.map(h => (<option key={h.hostid} value={h.hostid}>{h.name || h.host}</option>))}
                 </select>
+                
+                <select
+                  aria-label="Auto-actualisation"
+                  className="h-9 min-w-[140px] border rounded-md px-3 bg-background text-foreground"
+                  value={String(refreshIntervalSec)}
+                  onChange={(e) => setRefreshIntervalSec(Number(e.target.value))}
+                >
+                  <option value="0">Pas d&apos;auto-refresh</option> 
+                  <option value="15">15 secondes</option>
+                  <option value="30">30 secondes</option>
+                  <option value="60">1 minute</option>
+                  <option value="300">5 minutes</option>
+                </select>
+                
+                <Button
+                  onClick={refreshWidgetData}
+                  variant="outline"
+                  size="sm"
+                  className="h-9"
+                >
+                  🔄 Actualiser
+                </Button>
               </div>
             </div>
             
@@ -625,6 +670,8 @@ function DashboardEditorPageInner() {
           <div className="w-80 min-w-80 max-w-80 editor-sidebar border-l border-gray-200 dark:border-gray-700 flex flex-col flex-shrink-0">
             <RightPanel
                 selectedWidget={transformedWidgets.find(w => w.id === selectedWidgetId) || null}
+                widgets={widgets}
+                currentHostId={selectedHostId}
                 onChange={(updates) => {
                   if (!selectedWidgetId) return;
                   setWidgets(prev => prev.map(w => w.id === selectedWidgetId ? { ...w, ...updates } : w));

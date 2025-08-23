@@ -1,6 +1,6 @@
 // backend/notification-service/src/routes/notificationRoutes.js
 const express = require('express');
-const { sendTestEmail, sendWelcomeEmail } = require('../controllers/notificationController');
+const { sendTestEmail, sendAlertEmail, sendWelcomeEmail } = require('../controllers/notificationController');
 const authenticateRequest = require('../middleware/authenticateToken');
 
 const router = express.Router();
@@ -59,6 +59,102 @@ const router = express.Router();
  *         description: Erreur interne du serveur lors de l'envoi.
  */
 router.post('/email/send', authenticateRequest, sendTestEmail);
+
+/**
+ * @swagger
+ * /api/notifications/email/alert:
+ *   post:
+ *     summary: Envoie un email d'alerte enrichi
+ *     tags: [Notifications]
+ *     description: Envoie un email d'alerte avec template enrichi et contexte détaillé. Endpoint optimisé pour les alertes de supervision.
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - alertType
+ *               - widgetTitle
+ *               - hostName
+ *               - metricName
+ *               - currentValue
+ *               - threshold
+ *             properties:
+ *               alertType:
+ *                 type: string
+ *                 description: Type d'alerte (gauge, multiChart, availability, problems, metricValue)
+ *                 example: "gauge"
+ *               severity:
+ *                 type: string
+ *                 description: Niveau de sévérité de l'alerte
+ *                 enum: [critical, high, medium, warning, info]
+ *                 example: "critical"
+ *               widgetTitle:
+ *                 type: string
+ *                 description: Titre du widget qui a déclenché l'alerte
+ *                 example: "CPU Usage Monitor"
+ *               hostName:
+ *                 type: string
+ *                 description: Nom de l'hôte concerné
+ *                 example: "Docker Host"
+ *               metricName:
+ *                 type: string
+ *                 description: Nom de la métrique
+ *                 example: "CPU utilization"
+ *               currentValue:
+ *                 type: string
+ *                 description: Valeur actuelle de la métrique
+ *                 example: "95.2"
+ *               threshold:
+ *                 type: string
+ *                 description: Seuil configuré
+ *                 example: "90"
+ *               units:
+ *                 type: string
+ *                 description: Unité de mesure
+ *                 example: "%"
+ *               condition:
+ *                 type: string
+ *                 description: Condition de déclenchement
+ *                 example: "supérieur à"
+ *               timestamp:
+ *                 type: string
+ *                 description: Horodatage de l'alerte (ISO string)
+ *                 example: "2024-01-15T10:30:00Z"
+ *               dashboardUrl:
+ *                 type: string
+ *                 description: URL vers le dashboard concerné
+ *                 example: "https://supervia.local/dashboard-editor"
+ *               additionalContext:
+ *                 type: object
+ *                 description: Contexte additionnel pour enrichir l'alerte
+ *                 properties:
+ *                   trend:
+ *                     type: string
+ *                     example: "En hausse depuis 15 minutes"
+ *                   duration:
+ *                     type: string
+ *                     example: "Alerte active depuis 5 minutes"
+ *                   previousValue:
+ *                     type: string
+ *                     example: "87.3"
+ *                   frequency:
+ *                     type: string
+ *                     example: "3ème alerte en 1 heure"
+ *     responses:
+ *       200:
+ *         description: Alerte envoyée avec succès.
+ *       400:
+ *         description: Données manquantes dans la requête.
+ *       401:
+ *         description: Non autorisé (token ou clé API manquant/invalide).
+ *       500:
+ *         description: Erreur interne du serveur lors de l'envoi.
+ */
+router.post('/email/alert', authenticateRequest, sendAlertEmail);
 
 /**
  * @swagger

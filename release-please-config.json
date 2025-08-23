@@ -1,0 +1,36 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "bootstrap-sha": "",
+  "plugins": [
+    {
+      "type": "node-workspace"
+    }
+  ],
+  "packages": {
+    "backend/db-service": {
+      "component": "db-service",
+      "release-type": "node"
+    },
+    "backend/auth-service": {
+      "component": "auth-service",
+      "release-type": "node"
+    },
+    "backend/metrics-service": {
+      "component": "metrics-service",
+      "release-type": "node"
+    },
+    "backend/notification-service": {
+      "component": "notification-service",
+      "release-type": "node"
+    },
+    "backend/ai-service": {
+      "component": "ai-service",
+      "release-type": "node"
+    },
+    "frontend/supervia": {
+      "component": "frontend",
+      "release-type": "node"
+    }
+  }
+}
+

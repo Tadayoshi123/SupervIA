@@ -10,12 +10,14 @@ import Breadcrumbs from '@/components/layout/Breadcrumbs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Plus, BarChart3, Calendar, Trash2, Eye, Edit } from 'lucide-react';
 import dashboardService, { DashboardDto } from '@/lib/features/dashboard/dashboardService';
+import toast from 'react-hot-toast';
 
 export default function DashboardsPage() {
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
   const user = useAppSelector(selectUser);
   const [loading, setLoading] = useState(true);
   const [dashboards, setDashboards] = useState<DashboardDto[]>([]);
+  const [deletingIds, setDeletingIds] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     async function load() {
@@ -140,13 +142,24 @@ export default function DashboardsPage() {
                       size="sm"
                       variant="outline"
                       className="hover:bg-red-50 hover:border-red-300 hover:text-red-700 dark:hover:bg-red-900/20"
+                      disabled={deletingIds.has(d.id)}
                       onClick={async () => {
                         if (confirm(`Êtes-vous sûr de vouloir supprimer "${d.name}" ?`)) {
+                          setDeletingIds(prev => new Set(prev).add(d.id));
                           try {
+                            toast.loading('Suppression en cours...', { id: `delete-${d.id}` });
                             await dashboardService.deleteDashboard(d.id);
                             setDashboards((prev) => prev.filter((x) => x.id !== d.id));
+                            toast.success('Dashboard supprimé avec succès', { id: `delete-${d.id}` });
                           } catch (error) {
                             console.error('Erreur lors de la suppression:', error);
+                            toast.error('Erreur lors de la suppression du dashboard', { id: `delete-${d.id}` });
+                          } finally {
+                            setDeletingIds(prev => {
+                              const newSet = new Set(prev);
+                              newSet.delete(d.id);
+                              return newSet;
+                            });
                           }
                         }
                       }}

@@ -17,14 +17,16 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Vérifier la configuration au démarrage
-transporter.verify((error, success) => {
-  if (error) {
-    logger.fatal(error, 'La configuration SMTP est invalide.');
-  } else {
-    logger.info('Le service de messagerie est prêt à envoyer des emails via Mailtrap.');
-  }
-});
+// Vérifier la configuration au démarrage (sauf en test)
+if (process.env.NODE_ENV !== 'test') {
+  transporter.verify((error, success) => {
+    if (error) {
+      logger.fatal(error, 'La configuration SMTP est invalide.');
+    } else {
+      logger.info('Le service de messagerie est prêt à envoyer des emails via Mailtrap.');
+    }
+  });
+}
 
 /**
  * Envoie un email.

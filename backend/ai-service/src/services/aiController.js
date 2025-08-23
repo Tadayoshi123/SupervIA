@@ -150,17 +150,61 @@ const { callChatLLM } = require('./llmClient');
 
 async function summarize(req, res, next) {
   try {
-    const { problemsCount = 0, hostsOnline = 0, hostsTotal = 0 } = req.body || {};
-    // Si LLM dispo → demande un résumé court, sinon fallback local
-    let text = `Résumé: ${problemsCount} problème(s). Hôtes en ligne: ${hostsOnline}/${hostsTotal}.`;
+    const { 
+      problemsCount = 0, 
+      hostsOnline = 0, 
+      hostsTotal = 0,
+      problems = [],
+      widgets = [],
+      topMetrics = [],
+      dashboardStats = {},
+      timeRange = '1h'
+    } = req.body || {};
+    
+    // Fallback local enrichi
+    let text = `Infrastructure: ${hostsOnline}/${hostsTotal} hôtes en ligne, ${problemsCount} problème(s) détecté(s).`;
+    
     try {
-      const system = 'Tu es un assistant qui explique brièvement l’état d’une plateforme de supervision.';
-      const user = `Fais un résumé concis et actionnable. Problèmes: ${problemsCount}. Hôtes en ligne: ${hostsOnline}/${hostsTotal}.`;
-      const out = await callChatLLM({ system, user, temperature: 0.2 });
+      // Analyser les problèmes par sévérité
+      const criticalProblems = problems.filter(p => Number(p.severity) >= 4).length;
+      const highProblems = problems.filter(p => Number(p.severity) >= 3).length;
+      const mediumProblems = problems.filter(p => Number(p.severity) >= 2).length;
+      
+      // Analyser les widgets actifs
+      const widgetTypes = widgets.reduce((acc, w) => {
+        acc[w.type] = (acc[w.type] || 0) + 1;
+        return acc;
+      }, {});
+      
+      // Analyser les métriques critiques
+      const criticalMetrics = topMetrics.filter(m => {
+        const value = Number(m.value);
+        return (m.units?.includes('%') && value > 90) || 
+               (m.name?.toLowerCase().includes('cpu') && value > 80) ||
+               (m.name?.toLowerCase().includes('memory') && value > 85);
+      });
+      
+      // Construire un contexte riche pour l'IA
+      const system = `Tu es un expert en supervision d'infrastructure. Analyse l'état actuel et donne un résumé concis, actionnable et varié. 
+Utilise un ton professionnel mais accessible. Évite les répétitions et adapte ton analyse selon le contexte.
+Focus sur les points critiques et les recommandations pratiques.`;
+
+      const contextParts = [
+        `Infrastructure: ${hostsOnline}/${hostsTotal} hôtes actifs`,
+        problemsCount > 0 ? `Alertes: ${criticalProblems} critiques, ${highProblems} élevées, ${mediumProblems} moyennes` : 'Aucune alerte active',
+        widgets.length > 0 ? `Dashboard: ${widgets.length} widgets (${Object.entries(widgetTypes).map(([type, count]) => `${count} ${type}`).join(', ')})` : 'Dashboard vide',
+        criticalMetrics.length > 0 ? `Métriques critiques: ${criticalMetrics.map(m => `${m.name}: ${m.value}${m.units || ''}`).slice(0, 3).join(', ')}` : 'Métriques dans les seuils normaux',
+        `Période analysée: ${timeRange}`
+      ];
+      
+      const user = `Analyse cette infrastructure et donne un résumé en 2-3 phrases maximum :\n${contextParts.join('\n')}`;
+      
+      const out = await callChatLLM({ system, user, temperature: 0.4 });
       if (out.text) text = out.text.trim();
     } catch (e) {
-      // fallback silencieux
+      logger.warn('Fallback vers résumé local pour summarize:', e.message);
     }
+    
     res.json({ text });
   } catch (err) { next(err); }
 }

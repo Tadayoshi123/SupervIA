@@ -50,19 +50,52 @@ jobs:
         cd ../ai-service && npm install
         cd ../../frontend/supervia && npm install
     
-    # Tests désactivés temporairement (pas encore de suites de tests)
-    - name: Run backend tests (disabled)
-      if: ${{ false }}
+    - name: Run db-service tests
       run: |
         cd backend/db-service && npm test
-        cd ../auth-service && npm test
-        cd ../metrics-service && npm test
-        cd ../notification-service && npm test
-        cd ../ai-service && npm test
       env:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/supervia_test
         JWT_SECRET: test-secret
         INTERNAL_API_KEY: test-internal-key
+
+    - name: Run auth-service tests
+      run: |
+        cd backend/auth-service && npm test
+      env:
+        JWT_SECRET: test-secret
+        INTERNAL_API_KEY: test-internal-key
+        DB_SERVICE_URL: http://db-service:3000
+    
+    - name: Run metrics-service tests
+      run: |
+        cd backend/metrics-service && npm test
+      env:
+        JWT_SECRET: test-secret
+        INTERNAL_API_KEY: test-internal-key
+        ZABBIX_URL: http://zabbix.test/api_jsonrpc.php
+        ZABBIX_USER: Admin
+        ZABBIX_PASSWORD: zabbix
+
+    - name: Run notification-service tests
+      run: |
+        cd backend/notification-service && npm test
+      env:
+        JWT_SECRET: test-secret
+        INTERNAL_API_KEY: test-internal-key
+        SMTP_HOST: smtp.example.test
+        SMTP_USER: user
+        SMTP_PASS: pass
+        SMTP_FROM_NAME: SupervIA
+        SMTP_FROM_EMAIL: no-reply@supervia.test
+
+    - name: Run ai-service tests
+      run: |
+        cd backend/ai-service && npm test
+      env:
+        JWT_SECRET: test-secret
+        INTERNAL_API_KEY: test-internal-key
+        OPENAI_API_KEY: sk-test-dummy-key
+        OPENAI_MODEL: gpt-4o-mini
     
     - name: Run frontend tests (disabled)
       if: ${{ false }}

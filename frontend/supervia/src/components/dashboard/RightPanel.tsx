@@ -16,12 +16,15 @@ type Props = {
   selectedWidget: Widget | null;
   onChange: (updates: Partial<Widget>) => void;
   onAddWidget?: (type: WidgetType, title: string, hostId?: string, itemId?: string, config?: WidgetConfig) => void;
+  widgets?: Widget[];
+  currentHostId?: string;
 };
 
-export default function RightPanel({ selectedWidget, onChange, onAddWidget }: Props) {
+export default function RightPanel({ selectedWidget, onChange, onAddWidget, widgets = [], currentHostId }: Props) {
   const [loading, setLoading] = useState(false);
   const [iaText, setIaText] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'properties' | 'ai' | 'alerts'>('properties');
+  const [suggestions, setSuggestions] = useState<any[]>([]);
   const canGauge = selectedWidget?.type === 'gauge';
   const canTitle = !!selectedWidget;
   const hostsStats = useAppSelector(selectHostsStats);
@@ -99,10 +102,58 @@ export default function RightPanel({ selectedWidget, onChange, onAddWidget }: Pr
   const handleSummarize = async () => {
     setLoading(true);
     try {
-      const summary = await aiService.summarize(problems.length, hostsStats.online, hostsStats.total);
-      setIaText(`Résumé de l&apos;infrastructure :\n${summary}`);
-    } catch {
-      setIaText('Impossible de générer un résumé.');
+      // Collecter les métriques principales depuis les widgets
+      const topMetrics = widgets
+        .filter(w => w.type === 'metricValue' || w.type === 'gauge')
+        .map(w => {
+          const item = w.itemId && allItemsByHost ? 
+            Object.values(allItemsByHost).flat().find((it: any) => it.itemid === w.itemId) : null;
+          return item ? {
+            name: item.name || item.key_ || 'Métrique',
+            value: item.lastvalue || '0',
+            units: item.units || '',
+            hostId: w.hostId,
+            hostName: hostNameById[w.hostId || ''] || 'Hôte inconnu'
+          } : null;
+        })
+        .filter(Boolean)
+        .slice(0, 10); // Limiter à 10 métriques principales
+
+      // Statistiques du dashboard
+      const dashboardStats = {
+        totalWidgets: widgets.length,
+        widgetTypes: widgets.reduce((acc: any, w) => {
+          acc[w.type] = (acc[w.type] || 0) + 1;
+          return acc;
+        }, {}),
+        hostsMonitored: new Set(widgets.map(w => w.hostId).filter(Boolean)).size,
+        lastUpdate: new Date().toISOString()
+      };
+
+      // Problèmes enrichis avec noms d'hôtes
+      const enrichedProblems = problems.slice(0, 20).map(p => ({
+        name: p.name,
+        severity: p.severity,
+        hostName: p.hosts?.[0] ? (hostNameById[p.hosts[0].hostid] || p.hosts[0].host || 'Hôte inconnu') : 'Hôte inconnu',
+        eventid: p.eventid
+      }));
+
+      const summary = await aiService.summarize(
+        problems.length,
+        hostsStats.online,
+        hostsStats.total,
+        enrichedProblems,
+        widgets.map(w => ({ type: w.type, title: w.title, hostId: w.hostId })),
+        topMetrics,
+        dashboardStats,
+        '1h' // Période d'analyse
+      );
+      
+      const text = typeof (summary as any) === 'string' ? (summary as any) : (summary as any)?.text || '';
+      setIaText(`📊 Analyse de l'infrastructure :\n\n${text}`);
+    } catch (error) {
+      console.error('Erreur lors de la génération du résumé:', error);
+      setIaText('Impossible de générer un résumé. Veuillez réessayer.');
     } finally {
       setLoading(false);
     }
@@ -167,9 +218,25 @@ export default function RightPanel({ selectedWidget, onChange, onAddWidget }: Pr
 
   const handleSuggestWidgets = async () => {
     setLoading(true);
+    setSuggestions([]);
     try {
-      const hostId = selectedWidget?.hostId;
-      const items = itemsForHost.map(item => ({
+      // Contexte complet pour l'IA
+      const contextHostId = currentHostId || selectedWidget?.hostId || (hostsList.length > 0 ? hostsList[0].hostid : undefined);
+      const contextItems = contextHostId && allItemsByHost[contextHostId] ? allItemsByHost[contextHostId] : [];
+      
+      // Informations sur les widgets actuels
+      const currentWidgets = widgets.map(w => ({
+        type: w.type,
+        title: w.title,
+        hostId: w.hostId,
+        itemId: w.itemId,
+        config: w.config
+      }));
+      
+      // Informations sur l'hôte sélectionné
+      const hostInfo = hostsList.find(h => h.hostid === contextHostId);
+      
+      const items = contextItems.map(item => ({
         itemid: item.itemid,
         name: item.name,
         key_: item.key_,
@@ -178,19 +245,48 @@ export default function RightPanel({ selectedWidget, onChange, onAddWidget }: Pr
         lastvalue: item.lastvalue
       }));
       
-      const suggestions = await aiService.suggestWidgets(hostId, items);
+      // Contexte enrichi pour l'IA
+      const context = {
+        hostId: contextHostId,
+        hostName: hostInfo?.name || hostInfo?.host || 'Hôte inconnu',
+        currentWidgets,
+        availableItems: items,
+        dashboardStats: {
+          totalWidgets: widgets.length,
+          widgetTypes: [...new Set(widgets.map(w => w.type))]
+        }
+      };
+      
+      const suggestions = await aiService.suggestWidgets(contextHostId, items);
       if (suggestions && suggestions.length > 0) {
-        setIaText(`Widgets suggérés :\n${suggestions.map((s: any, i: number) => `${i+1}. ${s.type} - ${s.title} (${s.reasoning})`).join('\n')}\n\nUtilisez les boutons ci-dessous pour les ajouter.`);
-        
-        // Ici on pourrait ajouter des boutons pour créer les widgets suggérés
-        // mais on se contente d'afficher l'information pour l'instant
+        setSuggestions(suggestions);
+        setIaText(`Voici ${suggestions.length} suggestion${suggestions.length > 1 ? 's' : ''} de widgets pour enrichir votre dashboard "${hostInfo?.name || 'cet hôte'}" :`);
       } else {
-        setIaText('Aucun widget supplémentaire recommandé pour le moment.');
+        setIaText('Aucun widget supplémentaire recommandé pour le moment. Votre dashboard semble déjà bien complet !');
       }
     } catch {
-      setIaText('Impossible de générer des suggestions de widgets.');
+      setIaText('Impossible de générer des suggestions de widgets. Veuillez réessayer.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAddSuggestedWidget = (suggestion: any) => {
+    if (!onAddWidget) return;
+    
+    try {
+      const { type, title, hostId, itemId, config } = suggestion;
+      onAddWidget(type as WidgetType, title, hostId, itemId, config);
+      
+      // Retirer la suggestion de la liste après l'avoir ajoutée
+      setSuggestions(prev => prev.filter(s => s !== suggestion));
+      
+      // Mettre à jour le texte si plus de suggestions
+      if (suggestions.length === 1) {
+        setIaText('Toutes les suggestions ont été ajoutées ! Votre dashboard est maintenant plus complet.');
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout du widget suggéré:', error);
     }
   };
 
@@ -339,6 +435,39 @@ export default function RightPanel({ selectedWidget, onChange, onAddWidget }: Pr
                   <p className="text-sm text-blue-700 dark:text-blue-300 whitespace-pre-wrap">
                     {iaText}
                   </p>
+                </div>
+              )}
+
+              {suggestions.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100 text-sm">
+                    🎯 Suggestions disponibles
+                  </h4>
+                  {suggestions.map((suggestion, index) => (
+                    <div key={index} className="p-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <h5 className="font-medium text-green-900 dark:text-green-100 text-sm truncate">
+                            {suggestion.type === 'gauge' && '📊'} 
+                            {suggestion.type === 'multiChart' && '📈'} 
+                            {suggestion.type === 'metricValue' && '🔢'} 
+                            {suggestion.type === 'problems' && '⚠️'} 
+                            {suggestion.title}
+                          </h5>
+                          <p className="text-xs text-green-700 dark:text-green-300 mt-1 line-clamp-2">
+                            {suggestion.reasoning}
+                          </p>
+                        </div>
+                        <Button
+                          onClick={() => handleAddSuggestedWidget(suggestion)}
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700 text-white text-xs px-2 py-1 h-auto"
+                        >
+                          Ajouter
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
 

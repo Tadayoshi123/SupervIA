@@ -52,6 +52,8 @@ const router = express.Router();
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Dashboard'
+ *       401:
+ *         description: Clé API interne manquante ou invalide
  */
 router.post('/dashboards', createDashboard);
 
@@ -76,6 +78,8 @@ router.post('/dashboards', createDashboard);
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/Dashboard'
+ *       401:
+ *         description: Clé API interne manquante ou invalide
  */
 router.get('/users/:userId/dashboards', listDashboards);
 
@@ -98,6 +102,8 @@ router.get('/users/:userId/dashboards', listDashboards);
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Dashboard'
+ *       401:
+ *         description: Clé API interne manquante ou invalide
  *   put:
  *     summary: Mettre à jour un dashboard (nom + widgets)
  *     tags: [Dashboards]
@@ -127,6 +133,8 @@ router.get('/users/:userId/dashboards', listDashboards);
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Dashboard'
+ *       401:
+ *         description: Clé API interne manquante ou invalide
  *   delete:
  *     summary: Supprimer un dashboard
  *     tags: [Dashboards]
@@ -139,6 +147,8 @@ router.get('/users/:userId/dashboards', listDashboards);
  *     responses:
  *       204:
  *         description: Supprimé
+ *       401:
+ *         description: Clé API interne manquante ou invalide
  */
 router.get('/dashboards/:id', getDashboard);
 router.put('/dashboards/:id', updateDashboard);
