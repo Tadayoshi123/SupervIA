@@ -1,3 +1,13 @@
+/**
+ * Service de métriques SupervIA Frontend
+ * 
+ * Gère l'intégration avec le metrics-service pour récupérer les données Zabbix.
+ * Fournit des méthodes pour hosts, items, problèmes et données historiques.
+ * 
+ * @author SupervIA Team
+ * @version 1.0.0
+ */
+
 // src/lib/features/metrics/metricsService.ts
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
@@ -68,7 +78,11 @@ export interface ItemHistoryPoint {
   value: string; // numeric value as string
 }
 
-// Vérifie et gère un JWT expiré
+/**
+ * Vérifie si un token JWT est expiré
+ * @param {string} token - Token JWT à vérifier
+ * @returns {boolean} True si expiré ou invalide
+ */
 const isTokenExpired = (token: string): boolean => {
   try {
     const decoded = jwtDecode<{ exp?: number }>(token);
@@ -79,7 +93,10 @@ const isTokenExpired = (token: string): boolean => {
   }
 };
 
-// Configuration des en-têtes avec le token JWT
+/**
+ * Crée les headers d'authentification avec gestion d'expiration
+ * @returns {Record<string, string>} Headers avec Authorization si token valide
+ */
 const createAuthHeaders = () => {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   if (token && isTokenExpired(token)) {
@@ -99,7 +116,10 @@ const createAuthHeaders = () => {
   };
 };
 
-// Service pour récupérer les hôtes Zabbix
+/**
+ * Récupère la liste de tous les hôtes Zabbix
+ * @returns {Promise<ZabbixHost[]>} Liste des hôtes avec leurs interfaces
+ */
 const getHosts = async (): Promise<ZabbixHost[]> => {
   const response = await axios.get(`${METRICS_API_URL}/hosts`, {
     headers: createAuthHeaders(),
@@ -107,7 +127,11 @@ const getHosts = async (): Promise<ZabbixHost[]> => {
   return response.data;
 };
 
-// Service pour récupérer les items d'un hôte spécifique
+/**
+ * Récupère tous les items (métriques) d'un hôte spécifique
+ * @param {string} hostid - ID de l'hôte Zabbix
+ * @returns {Promise<ZabbixItem[]>} Liste des items avec leurs valeurs
+ */
 const getItemsForHost = async (hostid: string): Promise<ZabbixItem[]> => {
   const response = await axios.get(`${METRICS_API_URL}/items/${hostid}`, {
     headers: createAuthHeaders(),
@@ -115,7 +139,10 @@ const getItemsForHost = async (hostid: string): Promise<ZabbixItem[]> => {
   return response.data;
 };
 
-// Service pour récupérer les problèmes actifs
+/**
+ * Récupère tous les problèmes/alertes actifs de Zabbix
+ * @returns {Promise<ZabbixProblem[]>} Liste des problèmes avec sévérités
+ */
 const getProblems = async (): Promise<ZabbixProblem[]> => {
   const response = await axios.get(`${METRICS_API_URL}/problems`, {
     headers: createAuthHeaders(),

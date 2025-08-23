@@ -1,6 +1,17 @@
 const jwt = require('jsonwebtoken');
 const logger = require('../logger');
 
+/**
+ * Middleware d'authentification avec support dual (API Key + JWT)
+ * 
+ * Vérifie l'authentification via clé API interne ou token JWT utilisateur.
+ * Priorité donnée à la clé API si les deux sont présents.
+ * 
+ * @param {import('express').Request} req - Requête Express
+ * @param {import('express').Response} res - Réponse Express
+ * @param {import('express').NextFunction} next - Fonction middleware suivante
+ * @returns {void} Passe au middleware suivant ou retourne 401/403
+ */
 const authenticateRequest = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const internalApiKey = req.headers['x-internal-api-key'];

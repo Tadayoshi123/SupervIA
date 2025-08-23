@@ -18,6 +18,13 @@ const internalApiConfig = {
 
 const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || 'http://notification-service:3000';
 
+/**
+ * Inscription d'un nouvel utilisateur avec hashage de mot de passe
+ * @param {import('express').Request} req - Requête avec { email, password, name? }
+ * @param {import('express').Response} res - Réponse Express
+ * @param {import('express').NextFunction} next - Fonction middleware suivante
+ * @returns {Promise<void>} Utilisateur créé et email de bienvenue envoyé
+ */
 const register = async (req, res, next) => {
   const { email, password, name } = req.body;
 
@@ -71,6 +78,14 @@ const register = async (req, res, next) => {
   }
 };
 
+/**
+ * Connexion utilisateur avec vérification du mot de passe
+ * Utilise le service db interne pour récupérer le hash du mot de passe
+ * @param {import('express').Request} req - Requête avec { email, password }
+ * @param {import('express').Response} res - Réponse Express
+ * @param {import('express').NextFunction} next - Fonction middleware suivante
+ * @returns {Promise<void>} Token JWT et informations utilisateur
+ */
 const login = async (req, res, next) => {
   const { email, password } = req.body;
 
@@ -114,6 +129,12 @@ const login = async (req, res, next) => {
   }
 };
 
+/**
+ * Récupère le profil de l'utilisateur authentifié
+ * @param {import('express').Request} req - Requête avec req.user peuplé par middleware auth
+ * @param {import('express').Response} res - Réponse Express
+ * @returns {void} Profil utilisateur depuis le JWT
+ */
 const getProfile = (req, res) => {
   res.json(req.user);
 };

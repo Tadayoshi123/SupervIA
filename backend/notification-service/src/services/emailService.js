@@ -1,3 +1,16 @@
+/**
+ * Service d'envoi d'emails pour SupervIA
+ * 
+ * Interface sécurisée pour l'envoi d'emails via SMTP avec :
+ * - Configuration Nodemailer robuste
+ * - Vérification de configuration au démarrage
+ * - Gestion d'erreurs sécurisée (pas d'exposition des credentials)
+ * - Support multi-providers (Mailtrap, Gmail, SendGrid)
+ * - Logs détaillés avec preview URLs
+ * 
+ * @author SupervIA Team
+ */
+
 // backend/notification-service/src/services/emailService.js
 const nodemailer = require('nodemailer');
 const logger = require('../config/logger');
@@ -29,12 +42,19 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 /**
- * Envoie un email.
- * @param {object} mailOptions
- * @param {string} mailOptions.to
- * @param {string} mailOptions.subject
- * @param {string} mailOptions.text
- * @param {string} [mailOptions.html]
+ * Envoie un email via le transporteur SMTP configuré
+ * 
+ * Fonction principale d'envoi d'emails avec gestion d'erreurs sécurisée.
+ * Les erreurs SMTP détaillées ne sont pas exposées aux clients pour éviter
+ * la fuite d'informations sensibles sur la configuration.
+ * 
+ * @param {Object} mailOptions - Options de l'email à envoyer
+ * @param {string} mailOptions.to - Adresse email du destinataire
+ * @param {string} mailOptions.subject - Sujet de l'email
+ * @param {string} mailOptions.text - Corps du message en texte brut
+ * @param {string} [mailOptions.html] - Corps du message en HTML (optionnel)
+ * @returns {Promise<Object>} Informations sur l'email envoyé (messageId, preview URL)
+ * @throws {Error} Erreur générique si l'envoi échoue (détails masqués)
  */
 const sendEmail = async ({ to, subject, text, html }) => {
   const mailOptions = {

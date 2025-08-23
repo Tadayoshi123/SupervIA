@@ -1,7 +1,24 @@
+/**
+ * Middleware d'authentification dual pour le metrics-service
+ * 
+ * Supporte deux types d'authentification :
+ * 1. Service-à-service avec X-Internal-Api-Key
+ * 2. Utilisateur avec JWT Bearer token
+ * 
+ * @author SupervIA Team
+ */
+
 // backend/metrics-service/src/middleware/authenticateRequest.js
 const jwt = require('jsonwebtoken');
 const logger = require('../config/logger');
 
+/**
+ * Middleware d'authentification avec support dual (API Key + JWT)
+ * @param {import('express').Request} req - Requête Express
+ * @param {import('express').Response} res - Réponse Express
+ * @param {import('express').NextFunction} next - Fonction middleware suivante
+ * @returns {void} Passe au middleware suivant ou retourne 401
+ */
 const authenticateRequest = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const internalApiKey = req.headers['x-internal-api-key'];

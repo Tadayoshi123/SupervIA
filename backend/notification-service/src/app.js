@@ -1,3 +1,17 @@
+/**
+ * Configuration de l'application Express pour le notification-service
+ * 
+ * Configure une application Express complète avec :
+ * - Middlewares de sécurité (CORS, Helmet)
+ * - Authentification dual (JWT + clé API interne)
+ * - Support WebSocket via Socket.io
+ * - Documentation Swagger UI
+ * - Rate limiting pour les emails
+ * - Gestion d'erreurs centralisée
+ * 
+ * @author SupervIA Team
+ */
+
 // backend/notification-service/src/app.js
 const express = require('express');
 const cors = require('cors');
@@ -8,6 +22,11 @@ const errorHandler = require('./middleware/errorHandler');
 const notificationRoutes = require('./routes/notificationRoutes');
 const rateLimit = require('express-rate-limit');
 
+/**
+ * Construit et configure l'application Express pour les notifications
+ * 
+ * @returns {import('express').Application} Application Express configurée avec SMTP et WebSocket
+ */
 function buildApp() {
   const app = express();
 

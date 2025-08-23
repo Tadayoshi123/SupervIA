@@ -1,3 +1,17 @@
+/**
+ * Configuration de l'application Express pour l'auth-service
+ * 
+ * Configure une application Express complète avec :
+ * - Middlewares de sécurité (CORS, Helmet)
+ * - Authentification OAuth2 (Google, GitHub) via Passport
+ * - Gestion de sessions Express
+ * - Documentation Swagger UI
+ * - Rate limiting pour la sécurité
+ * - Gestion d'erreurs centralisée
+ * 
+ * @author SupervIA Team
+ */
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -9,6 +23,11 @@ const errorHandler = require('./middleware/errorHandler');
 const rateLimit = require('express-rate-limit');
 require('./config/passport');
 
+/**
+ * Construit et configure l'application Express avec authentification
+ * 
+ * @returns {import('express').Application} Application Express configurée avec OAuth2
+ */
 function buildApp() {
   const app = express();
 

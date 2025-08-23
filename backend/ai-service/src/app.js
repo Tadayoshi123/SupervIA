@@ -1,3 +1,16 @@
+/**
+ * Configuration de l'application Express pour l'ai-service
+ * 
+ * Configure une application Express complète avec :
+ * - Middlewares de sécurité (CORS, Helmet)
+ * - Documentation Swagger UI
+ * - Rate limiting pour les endpoints IA
+ * - Gestion d'erreurs centralisée
+ * - Routes d'intelligence artificielle
+ * 
+ * @author SupervIA Team
+ */
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -6,6 +19,11 @@ const swaggerSpec = require('./swagger');
 const errorHandler = require('./middleware/errorHandler');
 const rateLimit = require('express-rate-limit');
 
+/**
+ * Construit et configure l'application Express
+ * 
+ * @returns {import('express').Application} Application Express configurée
+ */
 function buildApp() {
   const app = express();
 

@@ -1,7 +1,13 @@
 // backend/db-service/src/controllers/dashboardController.js
 const prisma = require('./prisma');
 
-// Créer un dashboard
+/**
+ * Crée un nouveau dashboard avec ses widgets associés
+ * @param {import('express').Request} req - Requête avec { name, widgets, userId }
+ * @param {import('express').Response} res - Réponse Express
+ * @param {import('express').NextFunction} next - Fonction middleware suivante
+ * @returns {Promise<void>} Dashboard créé avec ses widgets
+ */
 async function createDashboard(req, res, next) {
   try {
     const { name, widgets, userId } = req.body;
@@ -34,7 +40,13 @@ async function createDashboard(req, res, next) {
   }
 }
 
-// Lister les dashboards d'un utilisateur
+/**
+ * Liste tous les dashboards d'un utilisateur donné
+ * @param {import('express').Request} req - Requête avec params.userId
+ * @param {import('express').Response} res - Réponse Express
+ * @param {import('express').NextFunction} next - Fonction middleware suivante
+ * @returns {Promise<void>} Liste des dashboards avec widgets
+ */
 async function listDashboards(req, res, next) {
   try {
     const userId = Number(req.params.userId);
@@ -49,7 +61,13 @@ async function listDashboards(req, res, next) {
   }
 }
 
-// Récupérer un dashboard par id
+/**
+ * Récupère un dashboard spécifique par son ID
+ * @param {import('express').Request} req - Requête avec params.id
+ * @param {import('express').Response} res - Réponse Express
+ * @param {import('express').NextFunction} next - Fonction middleware suivante
+ * @returns {Promise<void>} Dashboard avec ses widgets ou 404
+ */
 async function getDashboard(req, res, next) {
   try {
     const id = Number(req.params.id);
@@ -61,7 +79,14 @@ async function getDashboard(req, res, next) {
   }
 }
 
-// Mettre à jour un dashboard (nom + widgets remplacés)
+/**
+ * Met à jour un dashboard existant (nom et/ou widgets)
+ * Remplace complètement les widgets si fournis dans la requête
+ * @param {import('express').Request} req - Requête avec params.id et body.{name?, widgets?}
+ * @param {import('express').Response} res - Réponse Express
+ * @param {import('express').NextFunction} next - Fonction middleware suivante
+ * @returns {Promise<void>} Dashboard mis à jour avec widgets
+ */
 async function updateDashboard(req, res, next) {
   try {
     const id = Number(req.params.id);
@@ -98,7 +123,13 @@ async function updateDashboard(req, res, next) {
   }
 }
 
-// Supprimer un dashboard
+/**
+ * Supprime un dashboard et tous ses widgets associés
+ * @param {import('express').Request} req - Requête avec params.id
+ * @param {import('express').Response} res - Réponse Express
+ * @param {import('express').NextFunction} next - Fonction middleware suivante
+ * @returns {Promise<void>} Statut 204 en cas de succès
+ */
 async function deleteDashboard(req, res, next) {
   try {
     const id = Number(req.params.id);

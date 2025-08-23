@@ -1,15 +1,44 @@
+/**
+ * Contrôleurs IA pour SupervIA
+ * 
+ * Ce module contient tous les contrôleurs pour les fonctionnalités d'intelligence artificielle :
+ * - Suggestions de widgets intelligentes
+ * - Calcul de seuils automatiques
+ * - Détection d'anomalies statistiques
+ * - Prévisions par régression linéaire
+ * - Résumés contextuels avec LLM
+ * - Génération de titres de widgets
+ * 
+ * @author SupervIA Team
+ */
+
 const logger = require('../logger');
 
-// Helpers stats
+/**
+ * Calcule la moyenne d'un tableau de valeurs numériques
+ * @param {number[]} values - Tableau de valeurs numériques
+ * @returns {number} Moyenne des valeurs, 0 si tableau vide
+ */
 function mean(values) {
   if (!values.length) return 0;
   return values.reduce((a, b) => a + b, 0) / values.length;
 }
+/**
+ * Calcule l'écart-type d'un tableau de valeurs numériques
+ * @param {number[]} values - Tableau de valeurs numériques
+ * @returns {number} Écart-type des valeurs
+ */
 function stddev(values) {
   const m = mean(values);
   const variance = mean(values.map(v => (v - m) ** 2));
   return Math.sqrt(variance);
 }
+/**
+ * Calcule le percentile d'un tableau de valeurs numériques
+ * @param {number[]} values - Tableau de valeurs numériques
+ * @param {number} p - Percentile à calculer (0-100)
+ * @returns {number} Valeur du percentile demandé
+ */
 function percentile(values, p) {
   if (!values.length) return 0;
   const sorted = [...values].sort((a, b) => a - b);
@@ -17,7 +46,20 @@ function percentile(values, p) {
   return sorted[idx];
 }
 
-// Controllers
+/**
+ * Génère des suggestions de widgets intelligentes basées sur les métriques d'un hôte
+ * 
+ * Analyse les items Zabbix fournis et propose des widgets optimaux selon des heuristiques :
+ * - MultiChart pour vue d'ensemble (CPU, mémoire, disque)
+ * - Gauge pour métriques en pourcentage
+ * - Availability pour ping/disponibilité
+ * - MetricValue pour autres métriques importantes
+ * 
+ * @param {import('express').Request} req - Requête avec body.{hostId, items[]}
+ * @param {import('express').Response} res - Réponse Express
+ * @param {import('express').NextFunction} next - Middleware suivant
+ * @returns {Promise<void>} Suggestions de widgets avec configuration
+ */
 async function suggestWidgets(req, res, next) {
   try {
     const { hostId, items = [] } = req.body || {};
@@ -110,6 +152,17 @@ async function suggestWidgets(req, res, next) {
   }
 }
 
+/**
+ * Calcule des seuils d'alerte automatiques basés sur l'historique des données
+ * 
+ * Utilise les percentiles 80 et 95 pour déterminer des seuils warning et critical
+ * adaptés aux valeurs historiques de la métrique.
+ * 
+ * @param {import('express').Request} req - Requête avec body.values (array de nombres)
+ * @param {import('express').Response} res - Réponse Express
+ * @param {import('express').NextFunction} next - Middleware suivant
+ * @returns {Promise<void>} Seuils warning et critical calculés
+ */
 async function thresholds(req, res, next) {
   try {
     const { values } = req.body; // tableau de valeurs numériques
@@ -119,6 +172,17 @@ async function thresholds(req, res, next) {
   } catch (err) { next(err); }
 }
 
+/**
+ * Détecte les anomalies dans une série temporelle de données
+ * 
+ * Utilise la méthode du z-score avec un seuil de 3 écarts-types (99.7% de confiance).
+ * Les points avec |z-score| > 3 sont considérés comme des anomalies.
+ * 
+ * @param {import('express').Request} req - Requête avec body.series [{ts, value}]
+ * @param {import('express').Response} res - Réponse Express
+ * @param {import('express').NextFunction} next - Middleware suivant
+ * @returns {Promise<void>} Liste des points détectés comme anomalies
+ */
 async function anomaly(req, res, next) {
   try {
     const { series } = req.body; // [{ts,value}]
@@ -129,6 +193,17 @@ async function anomaly(req, res, next) {
   } catch (err) { next(err); }
 }
 
+/**
+ * Génère des prévisions basées sur une régression linéaire simple (OLS)
+ * 
+ * Calcule la tendance linéaire des données historiques et projette les valeurs futures
+ * sur l'horizon demandé. Utilise la méthode des moindres carrés ordinaires.
+ * 
+ * @param {import('express').Request} req - Requête avec body.{series, horizon}
+ * @param {import('express').Response} res - Réponse Express
+ * @param {import('express').NextFunction} next - Middleware suivant
+ * @returns {Promise<void>} Pente et prévisions sur l'horizon demandé
+ */
 async function predict(req, res, next) {
   try {
     const { series, horizon = 5 } = req.body; // OLS simple
@@ -148,6 +223,18 @@ async function predict(req, res, next) {
 
 const { callChatLLM } = require('./llmClient');
 
+/**
+ * Génère un résumé intelligent de l'état de l'infrastructure
+ * 
+ * Combine analyse locale et IA (OpenAI) pour créer des résumés contextuels.
+ * Analyse les problèmes, métriques critiques, widgets actifs et génère un texte
+ * professionnel et actionnable. Fallback local si OpenAI indisponible.
+ * 
+ * @param {import('express').Request} req - Requête avec contexte infrastructure
+ * @param {import('express').Response} res - Réponse Express
+ * @param {import('express').NextFunction} next - Middleware suivant
+ * @returns {Promise<void>} Résumé textuel de l'état système
+ */
 async function summarize(req, res, next) {
   try {
     const { 
@@ -209,6 +296,18 @@ Focus sur les points critiques et les recommandations pratiques.`;
   } catch (err) { next(err); }
 }
 
+/**
+ * Génère un titre intelligent pour un widget de dashboard
+ * 
+ * Utilise l'IA (OpenAI) pour créer des titres courts et descriptifs basés sur
+ * le type de widget et les métriques associées. Fallback vers titres génériques
+ * si l'IA n'est pas disponible.
+ * 
+ * @param {import('express').Request} req - Requête avec type et items du widget
+ * @param {import('express').Response} res - Réponse Express
+ * @param {import('express').NextFunction} next - Middleware suivant
+ * @returns {Promise<void>} Titre généré pour le widget
+ */
 async function generateTitle(req, res, next) {
   try {
     const { type, items = [] } = req.body || {};

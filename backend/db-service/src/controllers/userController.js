@@ -1,7 +1,13 @@
 // backend/db-service/src/controllers/userController.js
 const prisma = require('./prisma');
 
-// Récupérer tous les utilisateurs
+/**
+ * Récupère tous les utilisateurs avec leurs informations publiques
+ * @param {import('express').Request} req - Requête Express
+ * @param {import('express').Response} res - Réponse Express
+ * @param {import('express').NextFunction} next - Fonction middleware suivante
+ * @returns {Promise<void>} Liste des utilisateurs sans mots de passe
+ */
 const getAllUsers = async (req, res, next) => {
   try {
     const users = await prisma.user.findMany({
@@ -21,7 +27,13 @@ const getAllUsers = async (req, res, next) => {
   }
 };
 
-// Créer un nouvel utilisateur
+/**
+ * Crée un nouvel utilisateur dans la base de données
+ * @param {import('express').Request} req - Requête avec { email, password?, name? }
+ * @param {import('express').Response} res - Réponse Express
+ * @param {import('express').NextFunction} next - Fonction middleware suivante
+ * @returns {Promise<void>} Utilisateur créé sans mot de passe
+ */
 const createUser = async (req, res, next) => {
   try {
     const { email, password, name } = req.body;
@@ -63,7 +75,13 @@ const createUser = async (req, res, next) => {
   }
 };
 
-// Récupérer un utilisateur par son email (public: sans mot de passe)
+/**
+ * Récupère un utilisateur par son email (version publique, sans mot de passe)
+ * @param {import('express').Request} req - Requête avec params.email
+ * @param {import('express').Response} res - Réponse Express
+ * @param {import('express').NextFunction} next - Fonction middleware suivante
+ * @returns {Promise<void>} Utilisateur sans informations sensibles
+ */
 const getUserByEmail = async (req, res, next) => {
   try {
     const { email } = req.params;
@@ -93,7 +111,14 @@ const getUserByEmail = async (req, res, next) => {
   }
 };
 
-// Route strictement interne: retourne aussi le hash du mot de passe
+/**
+ * Route strictement interne: retourne l'utilisateur avec le hash du mot de passe
+ * Utilisé uniquement par l'auth-service pour vérification des credentials
+ * @param {import('express').Request} req - Requête avec params.email
+ * @param {import('express').Response} res - Réponse Express
+ * @param {import('express').NextFunction} next - Fonction middleware suivante
+ * @returns {Promise<void>} Utilisateur complet avec password hash
+ */
 const getUserByEmailInternal = async (req, res, next) => {
   try {
     const { email } = req.params;

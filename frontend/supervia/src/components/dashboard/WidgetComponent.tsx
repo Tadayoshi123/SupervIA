@@ -12,7 +12,16 @@ import metricsService from '@/lib/features/metrics/metricsService';
 import notificationService from '@/lib/features/notifications/notificationService';
 import { sendEnrichedAlert } from '@/lib/utils/alertUtils';
 
-// Helper pour créer des notifications locales enrichies
+/**
+ * Helper pour créer des notifications locales enrichies dans le localStorage
+ * @param {string} widgetId - ID du widget source
+ * @param {string} type - Type de notification (alert, info, etc.)
+ * @param {string} subject - Titre de la notification
+ * @param {string} text - Corps du message
+ * @param {string} [hostName] - Nom de l'hôte concerné
+ * @param {string} [metricName] - Nom de la métrique
+ * @param {string} [severity] - Niveau de sévérité
+ */
 const createEnrichedNotification = (
   widgetId: string, 
   type: string, 

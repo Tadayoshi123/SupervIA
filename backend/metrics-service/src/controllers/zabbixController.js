@@ -11,13 +11,20 @@ if (!process.env.ZABBIX_URL || !process.env.ZABBIX_USER || !process.env.ZABBIX_P
     logger.info(`ZABBIX_PASSWORD est ${process.env.ZABBIX_PASSWORD ? 'défini' : 'non défini'}`);
 }
 
-// Classe utilitaire pour interagir avec l'API Zabbix
+/**
+ * Classe utilitaire pour interagir avec l'API Zabbix
+ * Gère l'authentification et les requêtes vers l'API JSON-RPC de Zabbix
+ */
 class ZabbixAPI {
     constructor() {
         this.auth = null;
         this.requestId = 1;
     }
 
+    /**
+     * S'authentifie auprès de l'API Zabbix
+     * @returns {Promise<string>} Token d'authentification
+     */
     async login() {
         try {
             logger.info(`Tentative de connexion à Zabbix (${process.env.ZABBIX_URL})...`);
@@ -49,6 +56,12 @@ class ZabbixAPI {
         }
     }
 
+    /**
+     * Exécute une requête vers l'API Zabbix
+     * @param {string} method - Méthode de l'API Zabbix (à appeler)
+     * @param {Object} params - Paramètres de la requête
+     * @returns {Promise<any>} Résultat de l'API Zabbix
+     */
     async request(method, params = {}) {
         try {
             if (!this.auth) {
@@ -93,6 +106,14 @@ class ZabbixAPI {
 const zabbixAPI = new ZabbixAPI();
 
 // Contrôleurs pour les routes
+
+/**
+ * Récupère la liste des hôtes depuis Zabbix
+ * @param {import('express').Request} req - Requête Express
+ * @param {import('express').Response} res - Réponse Express
+ * @param {import('express').NextFunction} next - Fonction middleware suivante
+ * @returns {Promise<void>} Liste des hôtes Zabbix
+ */
 const getZabbixHosts = async (req, res, next) => {
     try {
         const hosts = await zabbixAPI.request('host.get', {
@@ -113,6 +134,13 @@ const getZabbixHosts = async (req, res, next) => {
     }
 };
 
+/**
+ * Récupère tous les items (métriques) d'un hôte spécifique
+ * @param {import('express').Request} req - Requête avec params.hostid
+ * @param {import('express').Response} res - Réponse Express
+ * @param {import('express').NextFunction} next - Fonction middleware suivante
+ * @returns {Promise<void>} Liste des items Zabbix pour l'hôte
+ */
 const getZabbixItemsForHost = async (req, res, next) => {
     const { hostid } = req.params;
     try {
@@ -136,6 +164,13 @@ const getZabbixItemsForHost = async (req, res, next) => {
     }
 };
 
+/**
+ * Récupère tous les problèmes/alertes actifs de Zabbix
+ * @param {import('express').Request} req - Requête Express
+ * @param {import('express').Response} res - Réponse Express
+ * @param {import('express').NextFunction} next - Fonction middleware suivante
+ * @returns {Promise<void>} Liste des problèmes avec détails
+ */
 const getZabbixProblems = async (req, res, next) => {
     try {
         const problems = await zabbixAPI.request('problem.get', {
@@ -158,7 +193,13 @@ const getZabbixProblems = async (req, res, next) => {
     }
 };
 
-// Nouveau: résumé des hôtes (total / en ligne / hors ligne)
+/**
+ * Génère un résumé des hôtes (total, en ligne, hors ligne)
+ * @param {import('express').Request} req - Requête Express
+ * @param {import('express').Response} res - Réponse Express
+ * @param {import('express').NextFunction} next - Fonction middleware suivante
+ * @returns {Promise<void>} Statistiques des hôtes
+ */
 const getHostsSummary = async (req, res, next) => {
     try {
         const hosts = await zabbixAPI.request('host.get', {
@@ -179,7 +220,13 @@ const getHostsSummary = async (req, res, next) => {
     }
 };
 
-// Nouveau: top items numériques pour un hôte
+/**
+ * Récupère les top items numériques d'un hôte
+ * @param {import('express').Request} req - Requête avec params.hostid et query.limit
+ * @param {import('express').Response} res - Réponse Express
+ * @param {import('express').NextFunction} next - Fonction middleware suivante
+ * @returns {Promise<void>} Top items avec valeurs et unités
+ */
 const getTopItemsForHost = async (req, res, next) => {
     const { hostid } = req.params;
     const limit = Math.max(1, Math.min(parseInt(req.query.limit || '5', 10), 20));
@@ -213,7 +260,13 @@ const getTopItemsForHost = async (req, res, next) => {
     }
 };
 
-// Historique d'un item (timeseries)
+/**
+ * Récupère l'historique d'un item Zabbix (données temporelles)
+ * @param {import('express').Request} req - Requête avec params.itemid et query.{from, to, limit}
+ * @param {import('express').Response} res - Réponse Express
+ * @param {import('express').NextFunction} next - Fonction middleware suivante
+ * @returns {Promise<void>} Données historiques de l'item
+ */
 const getItemHistory = async (req, res, next) => {
     const { itemid } = req.params;
     const { from, to, limit } = req.query;

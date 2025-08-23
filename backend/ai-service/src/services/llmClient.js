@@ -1,5 +1,27 @@
+/**
+ * Client LLM pour intégration OpenAI dans SupervIA
+ * 
+ * Fournit une interface sécurisée pour les appels à l'API OpenAI avec :
+ * - Timeout automatique (15s)
+ * - Gestion d'erreurs robuste
+ * - Fallback gracieux si API indisponible
+ * - Support multi-modèles (GPT-4o-mini par défaut)
+ * 
+ * @author SupervIA Team
+ */
+
 const logger = require('../logger');
 
+/**
+ * Effectue un appel à l'API OpenAI Chat Completions
+ * 
+ * @param {Object} params - Paramètres de l'appel LLM
+ * @param {string} params.system - Message système pour définir le comportement
+ * @param {string} params.user - Message utilisateur/prompt principal
+ * @param {number} [params.temperature=0.3] - Créativité de la réponse (0-1)
+ * @param {string} [params.model] - Modèle OpenAI à utiliser
+ * @returns {Promise<{text: string|null}>} Réponse générée ou null si erreur
+ */
 async function callChatLLM({ system, user, temperature = 0.3, model = process.env.OPENAI_MODEL || 'gpt-4o-mini' }) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {

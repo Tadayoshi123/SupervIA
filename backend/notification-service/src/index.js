@@ -1,3 +1,17 @@
+/**
+ * Point d'entrée principal du notification-service avec Socket.io
+ * 
+ * Initialise et démarre le serveur Express hybride avec :
+ * - Configuration des variables d'environnement
+ * - Construction de l'application Express avec SMTP
+ * - Serveur HTTP avec Socket.io pour WebSocket
+ * - Middleware d'authentification Socket.io optionnelle
+ * - Gestion des événements temps-réel (connexion, rooms)
+ * - Logging du démarrage
+ * 
+ * @author SupervIA Team
+ */
+
 // backend/notification-service/src/index.js
 const http = require('http');
 const { Server } = require("socket.io");
@@ -10,6 +24,10 @@ dotenv.config();
 const app = buildApp();
 const server = http.createServer(app);
 
+/**
+ * Instance Socket.io configurée avec CORS
+ * @type {import('socket.io').Server}
+ */
 const io = new Server(server, {
   cors: {
     origin: process.env.FRONTEND_URL || "http://localhost:3000",

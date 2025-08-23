@@ -1,3 +1,17 @@
+/**
+ * Configuration de l'application Express pour le metrics-service
+ * 
+ * Configure une application Express complète avec :
+ * - Middlewares de sécurité (CORS, Helmet)
+ * - Authentification dual (JWT + clé API interne)
+ * - Intégration Zabbix API
+ * - Documentation Swagger UI
+ * - Rate limiting pour la protection
+ * - Gestion d'erreurs centralisée
+ * 
+ * @author SupervIA Team
+ */
+
 // backend/metrics-service/src/app.js
 const express = require('express');
 const cors = require('cors');
@@ -8,6 +22,11 @@ const errorHandler = require('./middleware/errorHandler');
 const rateLimit = require('express-rate-limit');
 const metricsRoutes = require('./routes/metricsRoutes');
 
+/**
+ * Construit et configure l'application Express pour les métriques
+ * 
+ * @returns {import('express').Application} Application Express configurée avec Zabbix
+ */
 function buildApp() {
   const app = express();
 

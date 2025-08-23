@@ -1,7 +1,31 @@
+/**
+ * Contrôleurs de notifications pour SupervIA
+ * 
+ * Ce module gère l'envoi de notifications par email avec templates enrichis :
+ * - Emails génériques avec fallback HTML
+ * - Alertes enrichies avec contexte détaillé
+ * - Emails de bienvenue pour nouveaux utilisateurs
+ * - Émission d'événements WebSocket temps-réel
+ * 
+ * @author SupervIA Team
+ */
+
 // backend/notification-service/src/controllers/notificationController.js
 const { sendEmail } = require('../services/emailService');
 const logger = require('../config/logger');
 
+/**
+ * Envoie un email générique avec template HTML automatique
+ * 
+ * Permet l'envoi d'emails avec contenu personnalisé. Si aucun destinataire n'est
+ * fourni, utilise NOTIF_DEFAULT_TO. Génère automatiquement un template HTML
+ * professionnel si seul le texte est fourni.
+ * 
+ * @param {import('express').Request} req - Requête avec body.{to?, subject, text, html?}
+ * @param {import('express').Response} res - Réponse Express
+ * @param {import('express').NextFunction} next - Middleware suivant pour erreurs
+ * @returns {Promise<void>} Confirmation d'envoi
+ */
 const sendTestEmail = async (req, res, next) => {
   const { to, subject, text, html } = req.body;
 
@@ -273,6 +297,20 @@ Pour désactiver ces notifications, modifiez les paramètres de votre widget.`;
   }
 };
 
+/**
+ * Envoie un email de bienvenue personnalisé à un nouvel utilisateur
+ * 
+ * Génère un email de bienvenue avec template HTML professionnel incluant :
+ * - Message de bienvenue personnalisé
+ * - Liste des fonctionnalités SupervIA
+ * - Design responsive et moderne
+ * - Émission d'événement WebSocket pour notification temps-réel
+ * 
+ * @param {import('express').Request} req - Requête avec body.{to, name?}
+ * @param {import('express').Response} res - Réponse Express
+ * @param {import('express').NextFunction} next - Middleware suivant pour erreurs
+ * @returns {Promise<void>} Confirmation d'envoi et événement WebSocket
+ */
 const sendWelcomeEmail = async (req, res, next) => {
   const { to, name } = req.body;
 

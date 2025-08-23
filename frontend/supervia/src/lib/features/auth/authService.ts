@@ -1,3 +1,13 @@
+/**
+ * Service d'authentification SupervIA Frontend
+ * 
+ * Gère l'authentification utilisateur avec JWT, localStorage et décodage de tokens.
+ * Supporte l'inscription, connexion et gestion de session côté client.
+ * 
+ * @author SupervIA Team
+ * @version 1.0.0
+ */
+
 // src/lib/features/auth/authService.ts
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
@@ -15,13 +25,21 @@ export interface LoginData {
   password?: string;
 }
 
-// Register user
+/**
+ * Inscription d'un nouvel utilisateur
+ * @param {RegisterData} userData - Données d'inscription
+ * @returns {Promise<any>} Réponse du serveur avec utilisateur créé
+ */
 const register = async (userData: RegisterData) => {
   const response = await axios.post(`${API_URL}/register`, userData);
   return response.data;
 };
 
-// Login user
+/**
+ * Connexion utilisateur avec sauvegarde du token
+ * @param {LoginData} userData - Identifiants de connexion
+ * @returns {Promise<{user: any, token: string}>} Utilisateur et token JWT
+ */
 const login = async (userData: LoginData) => {
   const response = await axios.post(`${API_URL}/login`, userData);
   if (response.data.token) {
@@ -35,7 +53,10 @@ const login = async (userData: LoginData) => {
   return response.data;
 };
 
-// Logout user
+/**
+ * Déconnexion utilisateur avec nettoyage du localStorage
+ * @returns {void}
+ */
 const logout = () => {
   localStorage.removeItem('token');
 };

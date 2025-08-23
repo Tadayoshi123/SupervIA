@@ -1,3 +1,17 @@
+/**
+ * Configuration de l'application Express pour le db-service
+ * 
+ * Configure une application Express complète avec :
+ * - Middlewares de sécurité (CORS, Helmet)
+ * - Authentification strictement interne (clé API)
+ * - Documentation Swagger UI
+ * - Rate limiting pour la protection
+ * - Gestion d'erreurs centralisée
+ * - Routes utilisateurs et dashboards
+ * 
+ * @author SupervIA Team
+ */
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -7,6 +21,11 @@ const errorHandler = require('./middleware/errorHandler');
 const rateLimit = require('express-rate-limit');
 const authenticateInternalRequest = require('./middleware/authenticateInternalRequest');
 
+/**
+ * Construit et configure l'application Express pour la base de données
+ * 
+ * @returns {import('express').Application} Application Express configurée avec Prisma
+ */
 function buildApp() {
   const app = express();
 
