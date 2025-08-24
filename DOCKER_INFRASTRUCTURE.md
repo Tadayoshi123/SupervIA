@@ -479,7 +479,7 @@ Les images finales sont optimisées :
 ## 🔗 Points d'intégration
 
 ### Configuration Zabbix manuelle
-Voir [`ZABBIX_MANUAL_SETUP.md`](./ZABBIX_MANUAL_SETUP.md) pour :
+Voir [`MANUEL_INSTALLATION.md`](./MANUEL_INSTALLATION.md) pour :
 - Configuration de l'auto-registration
 - Templates et groupes d'hôtes
 - Dépannage des agents
@@ -508,7 +508,7 @@ volumes:
 - **3001-3005** : Services backend (debug/développement)
 
 ### Configuration Zabbix
-L'auto-registration nécessite une configuration manuelle initiale (voir `ZABBIX_MANUAL_SETUP.md`).
+L'auto-registration nécessite une configuration manuelle initiale (voir `MANUEL_INSTALLATION.md`).
 
 ### Secrets
 Le fichier `.env` contient des informations sensibles et **ne doit jamais être commité**.

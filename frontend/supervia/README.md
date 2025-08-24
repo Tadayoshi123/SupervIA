@@ -1,4 +1,4 @@
-# SupervIA Frontend - Next.js 15 Application
+# SupervIA Frontend — Next.js 15
 
 ## Vue d'ensemble
 
@@ -173,10 +173,9 @@ export async function GET(
 ### 7. Design System et UI
 
 **Composants UI** (`components/ui/`):
-- Design system basé sur Shadcn/ui
+- Base Tailwind + Radix UI (labels, select, slot)
 - Composants accessibles (a11y) avec ARIA
-- Support mode sombre avec `next-themes`
-- Composants personnalisés: `CustomSelect`, `NumberInput`, etc.
+- Mode sombre via `next-themes`
 
 **Layout Adaptatif**:
 - Sidebar responsive (collapse/expand)
@@ -294,16 +293,16 @@ CMD ["npm", "start"]
 - Service Worker pour caching (si configuré)
 - CSP headers pour sécurité
 
+## Tests
+
+- Lint: `npm run lint`
+- E2E Cypress: à mettre en place (les mentions roadmap sont supprimées tant que non implémenté)
+
 ## Roadmap et Évolutions
 
 ### Fonctionnalités Planifiées
 
 1. **Dashboard Templates**: Modèles prédéfinis par type d'infrastructure
-2. **Collaboration**: Partage de dashboards entre utilisateurs
-3. **Mobile App**: Version React Native
-4. **PWA**: Support offline avec Service Workers
-5. **Tests E2E**: Cypress pour tests d'interface complets
-
 ### Améliorations IA
 
 - **Chatbot intégré**: Assistant IA pour navigation et configuration

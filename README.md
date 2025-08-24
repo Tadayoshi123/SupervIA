@@ -28,7 +28,7 @@ SupervIA suit une architecture microservices distribuée avec séparation claire
 | **DB Service** | 3002 | Base de données, ORM | Prisma, PostgreSQL |
 | **Metrics Service** | 3003 | Intégration Zabbix | Express, Zabbix API |
 | **Notification Service** | 3004 | Emails, WebSocket | Nodemailer, Socket.io |
-| **AI Service** | 3005 | Intelligence artificielle | Express, OpenAI GPT-4 |
+| **AI Service** | 3005 | Intelligence artificielle | Express, OpenAI (GPT‑4o‑mini par défaut) |
 
 ## 🚀 Démarrage rapide
 
@@ -113,13 +113,12 @@ SMTP_PASS=your-app-password
 
 ### 🧠 Intelligence Artificielle
 
-| Fonctionnalité | Description | API Endpoint |
-|---------------|-------------|--------------|
-| **Suggestions** | Recommandations de widgets selon l'infra | `POST /api/ai/suggest` |
-| **Anomalies** | Détection de patterns inhabituels | `POST /api/ai/anomaly` |
-| **Prédictions** | Prévisions de tendances | `POST /api/ai/predict` |
-| **Seuils auto** | Calcul de seuils optimaux | `POST /api/ai/thresholds` |
-| **Résumés** | Génération de titres et descriptions | `POST /api/ai/summarize` |
+Fonctionnalités actuelles (service IA) :
+- Suggestions de widgets (`POST /api/ai/suggest/widgets`)
+- Détection d'anomalies (`POST /api/ai/anomaly`)
+- Prédictions linéaires (`POST /api/ai/predict`)
+- Seuils automatiques (`POST /api/ai/thresholds`)
+- Résumés contextuels (`POST /api/ai/summarize`)
 
 ### 🔔 Système d'alertes
 
@@ -130,10 +129,9 @@ SMTP_PASS=your-app-password
 
 ### 📊 Intégration Zabbix
 
-- **API complète** : Hosts, Items, Problems, History
-- **Authentification** automatique avec tokens
-- **Cache intelligent** pour optimiser les performances
-- **Filtrage avancé** par sévérité, groups, patterns
+- **API** : Hosts, Items, Problems, History
+- **Authentification** via token Zabbix
+- **Filtrages usuels** côté requêtes (ex. sévérité)
 
 ## 🛠️ Développement
 
@@ -155,8 +153,8 @@ SupervIA/
 ### Commandes de développement
 
 ```bash
-# 🔄 Développement avec hot reload
-docker compose -f docker-compose.dev.yml up
+# 🔄 Développement
+docker compose up -d
 
 # 🧪 Tests unitaires (tous services)
 cd backend/db-service && npm test
@@ -207,8 +205,8 @@ docker compose build --no-cache
 ### 🖥️ Frontend Next.js ([Documentation complète](frontend/supervia/README.md))
 - **Next.js 15** + React 19 + TypeScript strict
 - **Redux Toolkit** pour état global
-- **BFF Proxy** pour sécurisation API Keys
-- **Design System** Tailwind + Shadcn/ui
+- **BFF Proxy** (injection de clé interne côté serveur)
+- **UI** Tailwind + Radix UI + composants internes
 
 ## 🐳 Déploiement
 
@@ -243,19 +241,17 @@ curl http://localhost:3001/health
 ```
 
 ### Swagger/OpenAPI
-- **Documentation API** automatique : `/api-docs`
+- **Documentation API** automatique : `/docs` sur chaque service
 - **Schemas** typés pour validation
 - **Tests interactifs** Swagger UI
 
 ## 🔒 Sécurité
 
 ### Standards appliqués
-- ✅ **OWASP Top 10** : Injection, XSS, CSRF protection
-- ✅ **HTTPS/TLS** : Chiffrement en transit
-- ✅ **JWT sécurisé** : RS256, expiration, refresh tokens
-- ✅ **CORS configuré** : Origines strictes
-- ✅ **Rate limiting** : Protection DDoS
-- ✅ **Input validation** : Zod schemas, sanitization
+- ✅ OWASP (principes de base) : XSS, headers de sécurité, rate limiting
+- ✅ JWT (HS256) avec expiration
+- ✅ CORS contrôlé, Helmet activé
+- ✅ Validation côté serveur lorsque pertinent
 
 ### Conformité
 - **RGPD/GDPR** : Minimisation données, opt-out
@@ -284,16 +280,11 @@ git push origin feature/nouvelle-fonctionnalite
 
 ## 🗺️ Roadmap
 
-### 🎯 Version 2.0 (Q2 2024)
+### 🎯 Version 1.5 (Q1 2026)
 - [ ] **Dashboard Templates** : Modèles prédéfinis par infrastructure
-- [ ] **Collaboration** : Partage dashboards, commentaires
-- [ ] **Mobile App** : Version React Native
 - [ ] **Plugin System** : Connecteurs tiers (Grafana, Prometheus)
-
-### 🚀 Version 3.0 (Q4 2024)
 - [ ] **IA Conversationnelle** : Chatbot assistant supervision
-- [ ] **Multi-tenant** : Isolation organisations
-- [ ] **Edge Computing** : Agents légers pour sites distants
+
 
 ## 📄 License
 
