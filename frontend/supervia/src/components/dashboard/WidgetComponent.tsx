@@ -169,7 +169,7 @@ export default function WidgetComponent({ widget, onRemove, isDragging }: Widget
   useEffect(() => {
     if (!(widget.type === 'metricValue')) return;
     const cfg: any = widget.config || {};
-    if (!Array.isArray(cfg.alerts) || cfg.alerts.length === 0) return;
+    if (!cfg.alertsEnabled || !Array.isArray(cfg.alerts) || cfg.alerts.length === 0) return;
     if (!item) return;
     const value = Number(item.lastvalue);
     if (!Number.isFinite(value)) return;
@@ -277,7 +277,7 @@ export default function WidgetComponent({ widget, onRemove, isDragging }: Widget
           const cfg: any = widget.config || {};
           const cooldownSec = Number(cfg.cooldownSec || 300);
           
-          if (Array.isArray(cfg.alerts) && cfg.alerts.length > 0 && multiData.length > 0) {
+          if (cfg.alertsEnabled && Array.isArray(cfg.alerts) && cfg.alerts.length > 0 && multiData.length > 0) {
             const lastRow = multiData[multiData.length - 1] as any;
             const now = Date.now();
             
@@ -521,7 +521,7 @@ export default function WidgetComponent({ widget, onRemove, isDragging }: Widget
         try {
           const cfg: any = widget.config || {};
           const level: 'warning' | 'critical' = cfg.gaugeNotifyLevel || 'critical';
-          const hasAlerts = Array.isArray(cfg.alerts) && cfg.alerts.length > 0;
+          const hasAlerts = cfg.alertsEnabled;
           const shouldNotify = hasAlerts && ((level === 'critical' && value >= crit) || (level === 'warning' && value >= warn));
           const cooldownSec = Number(cfg.cooldownSec || 300);
           const key = `supervia.cooldown.gauge.${widget.id}`;
@@ -634,8 +634,8 @@ export default function WidgetComponent({ widget, onRemove, isDragging }: Widget
           if (typeof window !== 'undefined') localStorage.setItem(prevKey, isOnline === null ? '-1' : isOnline ? '1' : '0');
           const transitionedDown = prevOnline === true && isOnline === false;
           const transitionedUp = prevOnline === false && isOnline === true;
-          const wantDown = !!cfg.alertOnDown;
-          const wantUp = !!cfg.alertOnUp;
+          const wantDown = cfg.alertsEnabled && !!cfg.alertOnDown;
+          const wantUp = cfg.alertsEnabled && !!cfg.alertOnUp;
           if ((transitionedDown && wantDown) || (transitionedUp && wantUp)) {
             if (now - last > cooldownSec * 1000) {
               const subject = `[${transitionedDown ? 'DOWN' : 'UP'}] ${host?.name || widget.hostId}`;
@@ -717,8 +717,7 @@ export default function WidgetComponent({ widget, onRemove, isDragging }: Widget
         // Notification simple sur problèmes si activé
         try {
           const cfg: any = widget.config || {};
-          const hasAlerts = Array.isArray(cfg.alerts) && cfg.alerts.length > 0;
-          if (hasAlerts) {
+          if (cfg.alertsEnabled) {
             const minSev = cfg.problemsMinSeverity || '0';
             const onlyHost = !!cfg.problemsHostOnly;
             const pool = onlyHost && widget.hostId ? problems.filter(p => p.hosts?.some(h => h.hostid === widget.hostId)) : problems;

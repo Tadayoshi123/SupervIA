@@ -501,62 +501,39 @@ export default function RightPanel({ selectedWidget, onChange, onAddWidget, widg
                 </p>
               </div>
 
-              {/* Options génériques */}
-              {(selectedWidget.type === 'gauge' || selectedWidget.type === 'metricValue' || selectedWidget.type === 'multiChart' || selectedWidget.type === 'availability') && (
-                <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                   <h4 className="font-medium text-gray-900 dark:text-gray-100">Notifications générales</h4>
-                   <div className="space-y-3">
-                     {selectedWidget.type === 'metricValue' && (
-                       <label className="flex items-center justify-between">
-                         <span className="text-sm text-gray-700 dark:text-gray-300">Activer les notifications</span>
-                         <input 
-                           type="checkbox" 
-                           className="w-4 h-4 text-cyan-600 rounded focus:ring-cyan-500"
-                           checked={!!(selectedWidget.config as any)?.notifyOnSingle}
-                           onChange={(e) => onChange({ config: { ...(selectedWidget.config || {}), notifyOnSingle: e.target.checked } as any })}
-                         />
-                       </label>
-                     )}
-                     {selectedWidget.type === 'multiChart' && (
-                       <label className="flex items-center justify-between">
-                         <span className="text-sm text-gray-700 dark:text-gray-300">Activer les notifications</span>
-                         <input 
-                           type="checkbox" 
-                           className="w-4 h-4 text-cyan-600 rounded focus:ring-cyan-500"
-                           checked={!!(selectedWidget.config as any)?.notifyOnMulti}
-                           onChange={(e) => onChange({ config: { ...(selectedWidget.config || {}), notifyOnMulti: e.target.checked } as any })}
-                         />
-                       </label>
-                     )}
-                     {selectedWidget.type === 'gauge' && (
-                       <label className="flex items-center justify-between">
-                         <span className="text-sm text-gray-700 dark:text-gray-300">Utiliser les seuils de jauge</span>
-                         <input
-                           type="checkbox"
-                           className="w-4 h-4 text-cyan-600 rounded focus:ring-cyan-500"
-                           checked={!!(selectedWidget.config as any)?.notifyOnGauge}
-                           onChange={(e) => onChange({ config: { ...(selectedWidget.config || {}), notifyOnGauge: e.target.checked } as any })}
-                         />
-                       </label>
-                     )}
-                     <div>
-                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                         Délai entre notifications (secondes)
-                       </label>
-                                             <NumberInput 
-                        className="w-full" 
-                        min={10}
-                        value={(selectedWidget.config as any)?.cooldownSec || 300}
-                        onChange={(value) => onChange({ config: { ...(selectedWidget.config || {}), cooldownSec: value } as any })} 
-                      />
-                     </div>
-                   </div>
+              {/* Configuration globale */}
+              <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                <h4 className="font-medium text-gray-900 dark:text-gray-100">Configuration globale</h4>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Délai entre notifications (secondes)
+                  </label>
+                  <NumberInput 
+                    className="w-full" 
+                    min={10}
+                    value={(selectedWidget.config as any)?.cooldownSec || 300}
+                    onChange={(value) => onChange({ config: { ...(selectedWidget.config || {}), cooldownSec: value } as any })} 
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Évite l'envoi de notifications trop fréquentes pour le même widget
+                  </p>
                 </div>
-              )}
+              </div>
 
               {selectedWidget.type === 'metricValue' && (
                 <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <h4 className="font-medium text-gray-900 dark:text-gray-100">Règle d&apos;alerte</h4>
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium text-gray-900 dark:text-gray-100">Règle d&apos;alerte</h4>
+                    <label className="flex items-center gap-2">
+                      <input 
+                        type="checkbox" 
+                        className="w-4 h-4 text-cyan-600 rounded focus:ring-cyan-500"
+                        checked={!!(selectedWidget.config as any)?.alertsEnabled}
+                        onChange={(e) => onChange({ config: { ...(selectedWidget.config || {}), alertsEnabled: e.target.checked } as any })}
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">Activer les alertes</span>
+                    </label>
+                  </div>
                   <div className="space-y-3">
                     <p className="text-xs text-muted-foreground">
                       Définissez une condition pour déclencher une alerte pour cette métrique.
@@ -567,7 +544,7 @@ export default function RightPanel({ selectedWidget, onChange, onAddWidget, widg
                         value={(selectedWidget.config?.alerts?.[0]?.operator) || '>'}
                         onChange={(e) => {
                           const newRule: AlertRule = { 
-                            ...(selectedWidget.config?.alerts?.[0] || { threshold: 0 }),
+                            ...(selectedWidget.config?.alerts?.[0] || { threshold: 100 }),
                             operator: e.target.value as any 
                           };
                           onChange({ config: { ...(selectedWidget.config || {}), alerts: [newRule] } as any });
@@ -581,7 +558,7 @@ export default function RightPanel({ selectedWidget, onChange, onAddWidget, widg
                       <NumberInput 
                         className="flex-1"
                         placeholder="Seuil"
-                        value={(selectedWidget.config?.alerts?.[0]?.threshold) || 0}
+                        value={(selectedWidget.config?.alerts?.[0]?.threshold) || 100}
                         onChange={(value) => {
                           const newRule: AlertRule = { 
                             ...(selectedWidget.config?.alerts?.[0] || { operator: '>' }),
@@ -597,7 +574,18 @@ export default function RightPanel({ selectedWidget, onChange, onAddWidget, widg
               
               {selectedWidget.type === 'gauge' && (
                 <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <h4 className="font-medium text-gray-900 dark:text-gray-100">Seuils de jauge</h4>
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium text-gray-900 dark:text-gray-100">Seuils de jauge</h4>
+                    <label className="flex items-center gap-2">
+                      <input 
+                        type="checkbox" 
+                        className="w-4 h-4 text-cyan-600 rounded focus:ring-cyan-500"
+                        checked={!!(selectedWidget.config as any)?.alertsEnabled}
+                        onChange={(e) => onChange({ config: { ...(selectedWidget.config || {}), alertsEnabled: e.target.checked } as any })}
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">Activer les alertes</span>
+                    </label>
+                  </div>
                   <div className="space-y-3">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -618,7 +606,18 @@ export default function RightPanel({ selectedWidget, onChange, onAddWidget, widg
 
               {selectedWidget.type === 'multiChart' && (
                 <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <h4 className="font-medium text-gray-900 dark:text-gray-100">Alertes par métrique</h4>
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium text-gray-900 dark:text-gray-100">Alertes par métrique</h4>
+                    <label className="flex items-center gap-2">
+                      <input 
+                        type="checkbox" 
+                        className="w-4 h-4 text-cyan-600 rounded focus:ring-cyan-500"
+                        checked={!!(selectedWidget.config as any)?.alertsEnabled}
+                        onChange={(e) => onChange({ config: { ...(selectedWidget.config || {}), alertsEnabled: e.target.checked } as any })}
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">Activer les alertes</span>
+                    </label>
+                  </div>
                   <div className="space-y-3">
                     <p className="text-xs text-muted-foreground">Définissez des alertes pour des métriques spécifiques dans ce graphique.</p>
                     {(selectedWidget.config?.series as string[] || []).map(itemId => {
@@ -628,7 +627,7 @@ export default function RightPanel({ selectedWidget, onChange, onAddWidget, widg
                         <div key={itemId} className="flex items-center justify-between p-2 bg-white dark:bg-gray-700 rounded-md">
                           <span className="text-sm truncate">{itemLabelById[itemId] || `Item ${itemId}`}</span>
                           <Button size="sm" variant="outline" onClick={() => {
-                            const newRule: AlertRule = { targetItemId: itemId, operator: '>', threshold: 0 };
+                            const newRule: AlertRule = { targetItemId: itemId, operator: '>', threshold: 100 };
                             const alerts = [...(selectedWidget.config?.alerts || []), newRule];
                             onChange({ config: { ...(selectedWidget.config || {}), alerts } as any });
                           }}>
@@ -688,7 +687,18 @@ export default function RightPanel({ selectedWidget, onChange, onAddWidget, widg
 
               {selectedWidget.type === 'availability' && (
                 <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <h4 className="font-medium text-gray-900 dark:text-gray-100">Événements de disponibilité</h4>
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium text-gray-900 dark:text-gray-100">Événements de disponibilité</h4>
+                    <label className="flex items-center gap-2">
+                      <input 
+                        type="checkbox" 
+                        className="w-4 h-4 text-cyan-600 rounded focus:ring-cyan-500"
+                        checked={!!(selectedWidget.config as any)?.alertsEnabled}
+                        onChange={(e) => onChange({ config: { ...(selectedWidget.config || {}), alertsEnabled: e.target.checked } as any })}
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">Activer les alertes</span>
+                    </label>
+                  </div>
                   <div className="space-y-3">
                     <label className="flex items-center justify-between">
                       <span className="text-sm text-gray-700 dark:text-gray-300">Notifier quand l&apos;hôte devient indisponible</span>
@@ -714,17 +724,19 @@ export default function RightPanel({ selectedWidget, onChange, onAddWidget, widg
 
               {selectedWidget.type === 'problems' && (
                 <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <h4 className="font-medium text-gray-900 dark:text-gray-100">Seuils de problèmes</h4>
-                  <div className="space-y-3">
-                    <label className="flex items-center justify-between">
-                      <span className="text-sm text-gray-700 dark:text-gray-300">Activer les notifications</span>
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium text-gray-900 dark:text-gray-100">Seuils de problèmes</h4>
+                    <label className="flex items-center gap-2">
                       <input 
                         type="checkbox" 
                         className="w-4 h-4 text-cyan-600 rounded focus:ring-cyan-500"
-                        checked={!!(selectedWidget.config as any)?.notifyOnProblems}
-                        onChange={(e) => onChange({ config: { ...(selectedWidget.config || {}), notifyOnProblems: e.target.checked } as any })}
+                        checked={!!(selectedWidget.config as any)?.alertsEnabled}
+                        onChange={(e) => onChange({ config: { ...(selectedWidget.config || {}), alertsEnabled: e.target.checked } as any })}
                       />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">Activer les alertes</span>
                     </label>
+                  </div>
+                  <div className="space-y-3">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Seuil de nombre de problèmes

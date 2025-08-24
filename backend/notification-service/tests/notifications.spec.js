@@ -159,6 +159,82 @@ describe('notification-service notifications', () => {
       }
     });
   });
+
+  describe('POST /api/notifications/batch/alert', () => {
+    it('should add alert to batch successfully', async () => {
+      const token = signToken();
+      const alertData = {
+        alertType: 'multiChart',
+        severity: 'warning',
+        widgetTitle: 'Test Widget',
+        hostName: 'Test Host',
+        metricName: 'CPU usage',
+        currentValue: '85',
+        threshold: '80',
+        units: '%',
+        condition: 'supérieur à 80'
+      };
+
+      const response = await request(app)
+        .post('/api/notifications/batch/alert')
+        .set('Authorization', `Bearer ${token}`)
+        .send(alertData)
+        .expect(200);
+
+      expect(response.body.message).toBe('Alerte ajoutée au batch avec succès.');
+      expect(response.body.batchInfo).toHaveProperty('alertsInBatch');
+      expect(response.body.batchInfo).toHaveProperty('batchDuration');
+      expect(response.body.batchInfo.alertsInBatch).toBeGreaterThan(0);
+    });
+
+    it('should return 400 if required fields are missing', async () => {
+      const token = signToken();
+      const incompleteData = {
+        alertType: 'gauge',
+        severity: 'critical'
+        // Missing widgetTitle, hostName, metricName
+      };
+
+      await request(app)
+        .post('/api/notifications/batch/alert')
+        .set('Authorization', `Bearer ${token}`)
+        .send(incompleteData)
+        .expect(400);
+    });
+
+    it('should return 401 without authorization', async () => {
+      const alertData = {
+        alertType: 'metricValue',
+        widgetTitle: 'Test',
+        hostName: 'Host',
+        metricName: 'Metric'
+      };
+
+      await request(app)
+        .post('/api/notifications/batch/alert')
+        .send(alertData)
+        .expect(401);
+    });
+  });
+
+  describe('POST /api/notifications/batch/flush', () => {
+    it('should flush batch if there are alerts', async () => {
+      const token = signToken();
+      const response = await request(app)
+        .post('/api/notifications/batch/flush')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+
+      // Le message peut être soit "Aucune alerte" soit "Batch de X alerte(s) envoyé"
+      expect(response.body.message).toMatch(/^(Aucune alerte en attente dans le batch\.|Batch de \d+ alerte\(s\) envoyé avec succès\.)$/);
+    });
+
+    it('should return 401 without authorization', async () => {
+      await request(app)
+        .post('/api/notifications/batch/flush')
+        .expect(401);
+    });
+  });
 });
 
 

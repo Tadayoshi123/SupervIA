@@ -84,17 +84,24 @@ interface WidgetConfig {
 }
 ```
 
-### 3. Système d'Alertes Intelligent
+### 3. Système d'Alertes Intelligent ⭐ **AMÉLIORÉ v1.2.0**
+
+**Système de Batch d'Alertes**
+- **🎯 Anti-spam** : Regroupement automatique des alertes sur 30 secondes
+- **📊 Classification** : Tri par sévérité (critique > élevé > moyen > attention)
+- **📧 Email professionnel** : Template HTML récapitulatif avec statistiques
+- **⚡ Notifications temps-réel** : WebSocket immédiat + email groupé
+- **🔄 Fallback robuste** : Système de secours en cas d'erreur
 
 **Alertes Enrichies**
 - Détection automatique de seuils avec contexte
 - Tendances calculées (hausse/baisse/stable)
 - Durée et fréquence des alertes
-- Notifications par email avec templates HTML riches
+- Provenance détaillée (widget, hôte, métrique)
 
 **Utilitaire `alertUtils.ts`**:
 ```typescript
-// Envoi d'alerte avec contexte enrichi
+// Envoi d'alerte via le système de batch (RECOMMANDÉ)
 await sendEnrichedAlert({
   widget,
   hostName: 'prod-server-01',
@@ -102,8 +109,32 @@ await sendEnrichedAlert({
   currentValue: 95,
   threshold: 80,
   trend: 'increasing',
-  duration: 15 // minutes
+  duration: 15, // minutes
+  additionalContext: {
+    frequency: '3ème alerte en 10 minutes'
+  }
 });
+
+// Le système utilise automatiquement sendBatchAlert() avec fallback
+// vers sendAlert() en cas d'erreur
+```
+
+**Service Frontend `notificationService.ts`**:
+```typescript
+// Nouvelle méthode recommandée (v1.2.0)
+const batchInfo = await notificationService.sendBatchAlert({
+  alertType: 'metricValue',
+  severity: 'warning',
+  widgetTitle: 'CPU Monitor',
+  hostName: 'Database Server',
+  metricName: 'CPU utilization',
+  currentValue: 85.5,
+  threshold: 80,
+  units: '%'
+});
+
+// Administration : forcer l'envoi du batch
+await notificationService.flushAlertBatch();
 ```
 
 ### 4. Intégration IA

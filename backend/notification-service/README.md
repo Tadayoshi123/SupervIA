@@ -258,7 +258,80 @@ const sendAlertEmail = async (req, res, next) => {
 </html>
 ```
 
-### 3. Email de bienvenue (`POST /api/notifications/email/welcome`)
+### 3. Système de batch d'alertes ⭐ **NOUVEAU v1.2.0**
+
+Le système de batch collecte automatiquement les alertes pendant 30 secondes et les envoie en un seul email récapitulatif professionnel. Cela évite le spam d'emails lors de déclenchements multiples.
+
+#### 3.1. Ajouter une alerte au batch (`POST /api/notifications/batch/alert`)
+
+```javascript
+const sendBatchAlert = async (req, res, next) => {
+  const { 
+    alertType,        // 'gauge', 'multiChart', 'availability', 'problems', 'metricValue'
+    severity = 'warning',  // 'critical', 'high', 'medium', 'warning', 'info'
+    widgetTitle,
+    hostName,
+    metricName,
+    currentValue,
+    threshold,
+    units = '',
+    condition,
+    additionalContext = {}
+  } = req.body;
+
+  // Ajoute l'alerte au service de batch
+  alertBatchService.addAlert({
+    alertType, severity, widgetTitle, hostName,
+    metricName, currentValue, threshold, units, condition, additionalContext
+  });
+
+  // Émet une notification temps-réel immédiate
+  io.emit('alert-notification', { 
+    type: alertType, severity, widgetTitle, hostName, metricName,
+    currentValue, threshold, units, timestamp: new Date().toLocaleString('fr-FR')
+  });
+
+  res.status(200).json({ 
+    message: 'Alerte ajoutée au batch avec succès.',
+    batchInfo: {
+      alertsInBatch: alertBatchService.alerts.length,
+      batchDuration: alertBatchService.batchDuration
+    }
+  });
+};
+```
+
+**Fonctionnalités** :
+- **⏱️ Collecte automatique** : 30 secondes de regroupement (configurable via `ALERT_BATCH_DURATION`)
+- **📊 Regroupement intelligent** : Tri par sévérité (critical > high > medium > warning > info)
+- **🎨 Email professionnel** : Template HTML avec statistiques et sections colorées
+- **⚡ Notifications temps-réel** : WebSocket immédiat + email groupé
+- **🔄 Gestion robuste** : Timer automatique, gestion d'erreurs, logging détaillé
+
+#### 3.2. Forcer l'envoi du batch (`POST /api/notifications/batch/flush`)
+
+```javascript
+const flushAlertBatch = async (req, res, next) => {
+  const alertCount = alertBatchService.alerts.length;
+  
+  if (alertCount === 0) {
+    return res.status(200).json({ message: 'Aucune alerte en attente dans le batch.' });
+  }
+
+  await alertBatchService.flushBatch();
+  
+  res.status(200).json({ 
+    message: `Batch de ${alertCount} alerte(s) envoyé avec succès.` 
+  });
+};
+```
+
+**Cas d'usage** :
+- **🧪 Tests** : Validation du système de batch
+- **⚙️ Administration** : Monitoring et debugging
+- **🚨 Urgence** : Envoi immédiat sans attendre le timer
+
+### 4. Email de bienvenue (`POST /api/notifications/email/welcome`)
 
 ```javascript
 const sendWelcomeEmail = async (req, res, next) => {
@@ -558,8 +631,12 @@ describe('notification-service socket.io', () => {
 
 #### Emails
 - `POST /api/notifications/email/send` - Email générique
-- `POST /api/notifications/email/alert` - Alerte enrichie
+- `POST /api/notifications/email/alert` - Alerte enrichie (envoi direct)
 - `POST /api/notifications/email/welcome` - Email de bienvenue
+
+#### Alertes par batch ⭐ **NOUVEAU v1.2.0**
+- `POST /api/notifications/batch/alert` - Ajouter alerte au batch (RECOMMANDÉ)
+- `POST /api/notifications/batch/flush` - Forcer envoi immédiat du batch
 
 #### WebSocket
 - **Connexion** : `ws://localhost:3004`
@@ -581,6 +658,9 @@ SMTP_FROM_EMAIL="no-reply@supervia.local"
 
 # Destinataire par défaut
 NOTIF_DEFAULT_TO="admin@supervia.local"
+
+# Configuration du système de batch (v1.2.0)
+ALERT_BATCH_DURATION="30000"  # Durée en ms (30 secondes par défaut)
 
 # Authentification SupervIA
 JWT_SECRET="your-jwt-secret"

@@ -1,6 +1,6 @@
 // backend/notification-service/src/routes/notificationRoutes.js
 const express = require('express');
-const { sendTestEmail, sendAlertEmail, sendWelcomeEmail } = require('../controllers/notificationController');
+const { sendTestEmail, sendAlertEmail, sendBatchAlert, flushAlertBatch, sendWelcomeEmail } = require('../controllers/notificationController');
 const authenticateRequest = require('../middleware/authenticateToken');
 
 const router = express.Router();
@@ -193,5 +193,90 @@ router.post('/email/alert', authenticateRequest, sendAlertEmail);
  *         description: Erreur interne du serveur lors de l'envoi.
  */
 router.post('/email/welcome', authenticateRequest, sendWelcomeEmail);
+
+/**
+ * @swagger
+ * /api/notifications/batch/alert:
+ *   post:
+ *     summary: Ajoute une alerte au système de batch pour envoi groupé
+ *     description: |
+ *       Ajoute une alerte au service de batch qui collecte les alertes pendant 30 secondes
+ *       avant d'envoyer un seul email récapitulatif. Cela évite le spam d'emails individuels
+ *       tout en conservant les notifications temps-réel dans l'interface.
+ *     tags: [Notifications]
+ *     security:
+ *       - BearerAuth: []
+ *       - ApiKeyAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/AlertBatchRequest'
+ *     responses:
+ *       200:
+ *         description: Alerte ajoutée au batch avec succès
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AlertBatchResponse'
+ *       400:
+ *         description: Paramètres requis manquants
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Non autorisé
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Erreur serveur
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.post('/batch/alert', authenticateRequest, sendBatchAlert);
+
+/**
+ * @swagger
+ * /api/notifications/batch/flush:
+ *   post:
+ *     summary: Force l'envoi immédiat du batch d'alertes
+ *     description: |
+ *       Endpoint d'administration pour forcer l'envoi immédiat de toutes les alertes
+ *       en attente dans le batch, sans attendre la fin du timer (utile pour les tests).
+ *     tags: [Notifications, Admin]
+ *     security:
+ *       - BearerAuth: []
+ *       - ApiKeyAuth: []
+ *     responses:
+ *       200:
+ *         description: Batch traité avec succès
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Batch de 5 alerte(s) envoyé avec succès."
+ *       401:
+ *         description: Non autorisé
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Erreur serveur
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.post('/batch/flush', authenticateRequest, flushAlertBatch);
 
 module.exports = router;

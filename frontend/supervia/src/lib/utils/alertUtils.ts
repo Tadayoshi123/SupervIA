@@ -195,11 +195,20 @@ export const sendEnrichedAlert = async (context: AlertContext): Promise<void> =>
   };
 
   try {
-    await notificationService.sendAlert(alertPayload);
+    // Utiliser le système de batch par défaut pour éviter le spam d'emails
+    const batchInfo = await notificationService.sendBatchAlert(alertPayload);
+    console.log(`Alerte ajoutée au batch (${batchInfo.alertsInBatch} alertes en attente)`);
   } catch (error) {
-    console.error('Erreur lors de l\'envoi de l\'alerte enrichie:', error);
-    // Fallback vers l'ancien système si nécessaire
-    throw error;
+    console.error('Erreur lors de l\'envoi de l\'alerte au batch:', error);
+    
+    // Fallback vers l'envoi direct en cas d'erreur avec le batch
+    try {
+      console.warn('Tentative de fallback vers l\'envoi direct...');
+      await notificationService.sendAlert(alertPayload);
+    } catch (fallbackError) {
+      console.error('Échec du fallback, alerte non envoyée:', fallbackError);
+      throw fallbackError;
+    }
   }
 };
 

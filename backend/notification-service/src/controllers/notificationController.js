@@ -12,6 +12,7 @@
 
 // backend/notification-service/src/controllers/notificationController.js
 const { sendEmail } = require('../services/emailService');
+const alertBatchService = require('../services/alertBatchService');
 const logger = require('../config/logger');
 
 /**
@@ -176,7 +177,7 @@ const sendAlertEmail = async (req, res, next) => {
 🖥️  Hôte: ${hostName}
 📈 Métrique: ${metricName}
 ⚡ Valeur actuelle: ${currentValue}${units}
-🎯 Seuil: ${condition || 'dépassé'} ${threshold}${units}
+🎯 Seuil: ${condition || `dépassé ${threshold}${units}`}
 🕐 Horodatage: ${formattedTimestamp}
 
 ${contextLines.length > 0 ? '📋 Contexte additionnel:\n' + contextLines.map(line => `• ${line}`).join('\n') + '\n' : ''}
@@ -248,7 +249,7 @@ Pour désactiver ces notifications, modifiez les paramètres de votre widget.`;
         </div>
         <div class="detail-row">
           <span class="detail-label">🎯 Seuil</span>
-          <span class="detail-value">${condition || 'dépassé'} ${threshold}${units}</span>
+          <span class="detail-value">${condition || `dépassé ${threshold}${units}`}</span>
         </div>
       </div>
 
@@ -292,6 +293,179 @@ Pour désactiver ces notifications, modifiez les paramètres de votre widget.`;
     });
 
     res.status(200).json({ message: 'Alerte envoyée avec succès.' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Ajoute une alerte au système de batch pour envoi groupé
+ * 
+ * Cette fonction ajoute l'alerte au service de batch qui collecte les alertes
+ * pendant une période donnée (30 secondes par défaut) avant d'envoyer un email
+ * récapitulatif unique. Cela évite le spam d'emails individuels tout en conservant
+ * les notifications temps-réel dans l'interface utilisateur via WebSocket.
+ * 
+ * Le système de batch offre plusieurs avantages :
+ * - Évite le spam d'emails lors de déclenchements multiples
+ * - Regroupe intelligemment les alertes par sévérité et hôte
+ * - Génère un email professionnel avec statistiques et détails
+ * - Conserve les notifications temps-réel pour l'interface
+ * - Gestion robuste des erreurs avec fallback
+ * 
+ * @async
+ * @param {import('express').Request} req - Requête Express avec body AlertBatchRequest
+ * @param {string} req.body.alertType - Type de widget (gauge, multiChart, availability, problems, metricValue)
+ * @param {string} [req.body.severity='warning'] - Niveau de sévérité (critical, high, medium, warning, info)
+ * @param {string} req.body.widgetTitle - Titre du widget qui a déclenché l'alerte
+ * @param {string} req.body.hostName - Nom de l'hôte concerné par l'alerte
+ * @param {string} req.body.metricName - Nom de la métrique surveillée
+ * @param {string|number} req.body.currentValue - Valeur actuelle qui a déclenché l'alerte
+ * @param {string|number} req.body.threshold - Seuil configuré pour l'alerte
+ * @param {string} [req.body.units=''] - Unité de mesure (%, MB, etc.)
+ * @param {string} [req.body.condition] - Description de la condition de déclenchement
+ * @param {Object} [req.body.additionalContext={}] - Contexte additionnel (tendance, durée, fréquence)
+ * @param {import('express').Response} res - Réponse Express avec AlertBatchResponse
+ * @param {import('express').NextFunction} next - Middleware suivant pour gestion d'erreurs
+ * @returns {Promise<void>} Promise résolue avec les informations du batch
+ * 
+ * @throws {Error} 400 - Paramètres requis manquants
+ * @throws {Error} 401 - Non autorisé (token/API key manquant)
+ * @throws {Error} 500 - Erreur interne du service de batch
+ * 
+ * @example
+ * // POST /api/notifications/batch/alert
+ * {
+ *   "alertType": "metricValue",
+ *   "severity": "warning",
+ *   "widgetTitle": "CPU Usage",
+ *   "hostName": "Web Server",
+ *   "metricName": "CPU utilization",
+ *   "currentValue": 85.5,
+ *   "threshold": 80,
+ *   "units": "%",
+ *   "condition": "supérieur à 80",
+ *   "additionalContext": {
+ *     "trend": "increasing",
+ *     "duration": "5 minutes"
+ *   }
+ * }
+ * 
+ * @since 1.2.0
+ */
+const sendBatchAlert = async (req, res, next) => {
+  try {
+    const { 
+      alertType, 
+      severity = 'warning',
+      widgetTitle,
+      hostName,
+      metricName,
+      currentValue,
+      threshold,
+      units = '',
+      condition,
+      additionalContext = {}
+    } = req.body;
+
+    if (!alertType || !widgetTitle || !hostName || !metricName) {
+      const error = new Error('Paramètres requis manquants pour l\'alerte batch. Fournissez au minimum: alertType, widgetTitle, hostName, metricName.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Ajouter l'alerte au batch
+    alertBatchService.addAlert({
+      alertType,
+      severity,
+      widgetTitle,
+      hostName,
+      metricName,
+      currentValue,
+      threshold,
+      units,
+      condition,
+      additionalContext
+    });
+
+    // Émission d'un événement socket pour notification temps réel (gardé individuel)
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('alert-notification', { 
+        type: alertType,
+        severity,
+        widgetTitle,
+        hostName,
+        metricName,
+        currentValue,
+        threshold,
+        units,
+        timestamp: new Date().toLocaleString('fr-FR'),
+        subject: `[${severity.toUpperCase()}] ${widgetTitle} - ${hostName}`
+      });
+    }
+
+    res.status(200).json({ 
+      message: 'Alerte ajoutée au batch avec succès.',
+      batchInfo: {
+        alertsInBatch: alertBatchService.alerts.length,
+        batchDuration: alertBatchService.batchDuration
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Force l'envoi immédiat du batch d'alertes (pour tests/admin)
+ * 
+ * Cette fonction administrative permet de déclencher manuellement le traitement
+ * et l'envoi du batch d'alertes en cours, sans attendre la fin du timer automatique.
+ * Elle est particulièrement utile pour :
+ * - Tests de fonctionnement du système de batch
+ * - Administration et monitoring en temps réel
+ * - Situations d'urgence nécessitant un envoi immédiat
+ * - Debugging et validation du système
+ * 
+ * Comportement :
+ * - Si le batch est vide, retourne un message informatif
+ * - Si le batch contient des alertes, les traite et envoie l'email
+ * - Annule le timer en cours et remet à zéro le batch
+ * - Gère les erreurs de traitement avec logging approprié
+ * 
+ * @async
+ * @param {import('express').Request} req - Requête Express (pas de body requis)
+ * @param {import('express').Response} res - Réponse Express avec message de confirmation
+ * @param {import('express').NextFunction} next - Middleware suivant pour gestion d'erreurs
+ * @returns {Promise<void>} Promise résolue avec confirmation de traitement
+ * 
+ * @throws {Error} 401 - Non autorisé (token/API key manquant)
+ * @throws {Error} 500 - Erreur interne lors du traitement du batch
+ * 
+ * @example
+ * // POST /api/notifications/batch/flush
+ * // Réponse si batch vide:
+ * { "message": "Aucune alerte en attente dans le batch." }
+ * 
+ * // Réponse si batch traité:
+ * { "message": "Batch de 5 alerte(s) envoyé avec succès." }
+ * 
+ * @since 1.2.0
+ */
+const flushAlertBatch = async (req, res, next) => {
+  try {
+    const alertCount = alertBatchService.alerts.length;
+    
+    if (alertCount === 0) {
+      return res.status(200).json({ message: 'Aucune alerte en attente dans le batch.' });
+    }
+
+    await alertBatchService.flushBatch();
+    
+    res.status(200).json({ 
+      message: `Batch de ${alertCount} alerte(s) envoyé avec succès.` 
+    });
   } catch (error) {
     next(error);
   }
@@ -411,5 +585,7 @@ L'équipe SupervIA`;
 module.exports = {
   sendTestEmail,
   sendAlertEmail,
+  sendBatchAlert,
+  flushAlertBatch,
   sendWelcomeEmail,
 };

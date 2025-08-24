@@ -157,6 +157,7 @@ jobs:
           echo "NEXT_PUBLIC_AI_API_URL=http://localhost:3005/api/ai";
           echo "NEXT_PUBLIC_NOTIFICATION_API_URL=http://localhost:3004";
           echo "NOTIF_DEFAULT_TO=${NOTIF_DEFAULT_TO}";
+          echo "ALERT_BATCH_DURATION=${ALERT_BATCH_DURATION}";
         } >> .env
       env:
         POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
