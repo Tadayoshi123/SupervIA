@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.0.0](https://github.com/Tadayoshi123/SupervIA/compare/frontend-v1.3.0...frontend-v2.0.0) (2025-08-24)
+
+
+### ⚠ BREAKING CHANGES
+
+* **notifications:** Alert system now uses batch processing by default. Previously individual emails were sent per alert, now alerts are collected for 30 seconds and sent as a single comprehensive report.
+
+### Features
+
+* **notifications:** implement intelligent alert batching system ([31dff38](https://github.com/Tadayoshi123/SupervIA/commit/31dff387dc90ad74fd5a896a1783705f73bd7973))
+
+
+### Bug Fixes
+
+* **frontend:** resolve linting errors in RightPanel component ([4901970](https://github.com/Tadayoshi123/SupervIA/commit/4901970cf8869b905b170d37fc9c21ae18b0de8c))
+
 ## [1.3.0](https://github.com/Tadayoshi123/SupervIA/compare/frontend-v1.2.0...frontend-v1.3.0) (2025-08-24)
 
 
