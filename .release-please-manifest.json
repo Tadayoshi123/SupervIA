@@ -1,5 +1,5 @@
 {
-  "backend/db-service": "1.2.0",
+  "backend/db-service": "1.2.1",
   "backend/auth-service": "1.2.0",
   "backend/metrics-service": "1.2.0",
   "backend/notification-service": "2.0.0",

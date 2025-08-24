@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/Tadayoshi123/SupervIA/compare/db-service-v1.2.0...db-service-v1.2.1) (2025-08-24)
+
+
+### Bug Fixes
+
+* **db-service:** resolve YAML syntax error in Swagger documentation ([0b2df00](https://github.com/Tadayoshi123/SupervIA/commit/0b2df00fd6b7c925b6ea7badb4cb4ca44174dc63))
+
 ## [1.2.0](https://github.com/Tadayoshi123/SupervIA/compare/db-service-v1.1.0...db-service-v1.2.0) (2025-08-23)
 
 
