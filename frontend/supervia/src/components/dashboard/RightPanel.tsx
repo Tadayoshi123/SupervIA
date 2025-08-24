@@ -313,7 +313,7 @@ export default function RightPanel({ selectedWidget, onChange, onAddWidget, widg
   return (
     <div className="h-full flex flex-col">
       {/* Navigation des onglets */}
-      <div className="flex border-b border-gray-200 dark:border-gray-700">
+      <div className="flex border-b border-gray-200 dark:border-gray-700" role="tablist" aria-label="Options du widget">
         {[
           { key: 'properties', label: 'Propriétés', icon: '⚙️' },
           { key: 'ai', label: 'Assistant IA', icon: '🤖' },
@@ -321,12 +321,16 @@ export default function RightPanel({ selectedWidget, onChange, onAddWidget, widg
         ].map((tab) => (
           <button
             key={tab.key}
+            id={`tab-${tab.key}`}
             onClick={() => setActiveTab(tab.key as typeof activeTab)}
             className={`flex-1 flex items-center justify-center gap-2 px-3 py-3 text-sm font-medium transition-colors ${
               activeTab === tab.key
                 ? 'text-cyan-600 border-b-2 border-cyan-600 bg-cyan-50 dark:bg-cyan-900/20'
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
             }`}
+            aria-label={`Onglet ${tab.label}`}
+            aria-selected={activeTab === tab.key}
+            role="tab"
           >
             <span>{tab.icon}</span>
             <span className="hidden sm:inline">{tab.label}</span>
@@ -337,7 +341,7 @@ export default function RightPanel({ selectedWidget, onChange, onAddWidget, widg
       {/* Contenu des onglets */}
       <div className="flex-1 overflow-y-auto">
         {activeTab === 'properties' && (
-          <div className="p-4">
+          <div className="p-4" role="tabpanel" id="panel-properties" aria-labelledby="tab-properties">
             <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
@@ -360,7 +364,7 @@ export default function RightPanel({ selectedWidget, onChange, onAddWidget, widg
         )}
 
         {activeTab === 'ai' && (
-          <div className="p-4">
+          <div className="p-4" role="tabpanel" id="panel-ai" aria-labelledby="tab-ai">
             <div className="space-y-4">
               <div className="p-3 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
                 <h3 className="font-medium text-purple-900 dark:text-purple-100 mb-2">
@@ -486,7 +490,7 @@ export default function RightPanel({ selectedWidget, onChange, onAddWidget, widg
         )}
 
         {activeTab === 'alerts' && (
-          <div className="p-4">
+          <div className="p-4" role="tabpanel" id="panel-alerts" aria-labelledby="tab-alerts">
             <div className="space-y-4">
               <div className="p-3 bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
                 <h3 className="font-medium text-orange-900 dark:text-orange-100 mb-2">
@@ -637,10 +641,17 @@ export default function RightPanel({ selectedWidget, onChange, onAddWidget, widg
                       <div key={index} className="p-3 border rounded-lg space-y-3">
                         <div className="flex items-center justify-between">
                           <p className="text-sm font-medium">{itemLabelById[rule.targetItemId || ''] || 'Alerte'}</p>
-                          <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => {
-                             const alerts = (selectedWidget.config?.alerts || []).filter((_, i) => i !== index);
-                             onChange({ config: { ...(selectedWidget.config || {}), alerts } as any });
-                          }}>
+                          <Button 
+                            size="icon" 
+                            variant="ghost" 
+                            className="h-6 w-6" 
+                            onClick={() => {
+                               const alerts = (selectedWidget.config?.alerts || []).filter((_, i) => i !== index);
+                               onChange({ config: { ...(selectedWidget.config || {}), alerts } as any });
+                            }}
+                            aria-label={`Supprimer l'alerte pour ${itemLabelById[rule.targetItemId || ''] || 'cette métrique'}`}
+                            title={`Supprimer l'alerte pour ${itemLabelById[rule.targetItemId || ''] || 'cette métrique'}`}
+                          >
                             <X className="h-4 w-4"/>
                           </Button>
                         </div>

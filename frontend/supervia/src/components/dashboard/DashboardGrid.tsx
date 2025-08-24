@@ -24,7 +24,8 @@ export default function DashboardGrid({ widgets, onRemoveWidget, onUpdateWidget,
     <div
       ref={setNodeRef}
       className="relative w-full h-full bg-gray-50 dark:bg-gray-900 rounded-md overflow-auto"
-      role="grid"
+      role="application"
+      aria-label="Zone de travail du dashboard"
     >
       {/* Surface de la grille avec taille fixe pour dnd */}
       <div className="relative" style={{ width: gridCols * gridSize, height: gridRows * gridSize }}>

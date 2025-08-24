@@ -115,7 +115,7 @@ export default function Home() {
                     <div key={index} className="flex items-start gap-4">
                       <CheckCircle className="h-6 w-6 text-green-500 mt-0.5 flex-shrink-0" />
                       <div>
-                        <h4 className="font-semibold mb-1">{benefit.title}</h4>
+                        <h3 className="font-semibold mb-1">{benefit.title}</h3>
                         <p className="text-gray-600 dark:text-gray-400">{benefit.description}</p>
                       </div>
                     </div>

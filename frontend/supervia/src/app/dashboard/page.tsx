@@ -474,7 +474,7 @@ export default function DashboardPage() {
           {/* KPI Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
             {/* Hôtes en ligne */}
-            <Card className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800 shadow-sm hover:shadow-md transition-shadow">
+            <Card className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800 shadow-sm hover:shadow-md transition-shadow" role="region" aria-label="Statistique hôtes en ligne">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
@@ -494,7 +494,7 @@ export default function DashboardPage() {
             </Card>
 
             {/* Hôtes hors ligne */}
-            <Card className="bg-gradient-to-r from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 border-red-200 dark:border-red-800 shadow-sm hover:shadow-md transition-shadow">
+            <Card className="bg-gradient-to-r from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 border-red-200 dark:border-red-800 shadow-sm hover:shadow-md transition-shadow" role="region" aria-label="Statistique hôtes hors ligne">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
@@ -514,7 +514,7 @@ export default function DashboardPage() {
             </Card>
 
             {/* Problèmes actifs */}
-            <Card className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border-orange-200 dark:border-orange-800 shadow-sm hover:shadow-md transition-shadow">
+            <Card className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border-orange-200 dark:border-orange-800 shadow-sm hover:shadow-md transition-shadow" role="region" aria-label="Statistique problèmes actifs">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
@@ -534,7 +534,7 @@ export default function DashboardPage() {
             </Card>
 
             {/* Disponibilité globale */}
-            <Card className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border-blue-200 dark:border-blue-800 shadow-sm hover:shadow-md transition-shadow">
+            <Card className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border-blue-200 dark:border-blue-800 shadow-sm hover:shadow-md transition-shadow" role="region" aria-label="Statistique disponibilité globale">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
@@ -610,7 +610,7 @@ export default function DashboardPage() {
             {/* Graphiques analytiques */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8" role="region" aria-label="Statistiques générales">
               {/* Disponibilité (donut) */}
-              <Card className="shadow-sm hover:shadow-md transition-shadow">
+              <Card className="shadow-sm hover:shadow-md transition-shadow" role="region" aria-label="Graphique de disponibilité">
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <div>
@@ -671,7 +671,7 @@ export default function DashboardPage() {
               </Card>
 
               {/* Répartition sévérités (camembert) */}
-              <Card className="shadow-sm hover:shadow-md transition-shadow">
+              <Card className="shadow-sm hover:shadow-md transition-shadow" role="region" aria-label="Graphique répartition des problèmes">
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <div>
@@ -728,7 +728,7 @@ export default function DashboardPage() {
               </Card>
 
               {/* Performance système */}
-              <Card className="shadow-sm hover:shadow-md transition-shadow">
+              <Card className="shadow-sm hover:shadow-md transition-shadow" role="region" aria-label="Graphique performance système">
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <div>
@@ -834,7 +834,7 @@ export default function DashboardPage() {
             {/* Section des listes */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Liste des hôtes moderne */}
-              <Card className="shadow-sm hover:shadow-md transition-shadow">
+              <Card className="shadow-sm hover:shadow-md transition-shadow" role="region" aria-label="Liste des hôtes surveillés">
                 <CardHeader className="pb-4">
                   <div className="flex items-center justify-between">
                     <div>
@@ -911,7 +911,7 @@ export default function DashboardPage() {
               </Card>
 
               {/* Liste des problèmes moderne */}
-              <Card className="shadow-sm hover:shadow-md transition-shadow">
+              <Card className="shadow-sm hover:shadow-md transition-shadow" role="region" aria-label="Liste des problèmes récents">
                 <CardHeader className="pb-4">
                   <div className="flex items-center justify-between">
                     <div>
@@ -993,7 +993,7 @@ export default function DashboardPage() {
             <div className="mt-8">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Temps de fonctionnement moyen */}
-                <Card className="shadow-sm hover:shadow-md transition-shadow">
+                <Card className="shadow-sm hover:shadow-md transition-shadow" role="region" aria-label="Métrique temps de fonctionnement">
                   <CardHeader className="pb-4">
                     <div className="flex items-center justify-between">
                       <div>
@@ -1028,7 +1028,7 @@ export default function DashboardPage() {
                 </Card>
 
                 {/* Charge système */}
-                <Card className="shadow-sm hover:shadow-md transition-shadow">
+                <Card className="shadow-sm hover:shadow-md transition-shadow" role="region" aria-label="Métrique charge système">
                   <CardHeader className="pb-4">
                     <div className="flex items-center justify-between">
                       <div>
@@ -1073,7 +1073,7 @@ export default function DashboardPage() {
                 </Card>
 
                 {/* Alertes récentes */}
-                <Card className="shadow-sm hover:shadow-md transition-shadow">
+                <Card className="shadow-sm hover:shadow-md transition-shadow" role="region" aria-label="Métrique alertes récentes">
                   <CardHeader className="pb-4">
                     <div className="flex items-center justify-between">
                       <div>
@@ -1222,7 +1222,7 @@ export default function DashboardPage() {
               <div className="w-full md:w-64">
                 <label className="block text-sm font-medium mb-1">Hôte</label>
                 <Select value={selectedHostId} onValueChange={(v) => { setSelectedHostId(v); setSelectedItemIds([]); }}>
-                  <SelectTrigger>
+                  <SelectTrigger aria-label="Hôte">
                     <SelectValue placeholder="Sélectionner un hôte" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1237,7 +1237,7 @@ export default function DashboardPage() {
               <div className="w-full md:w-48">
                 <label className="block text-sm font-medium mb-1">Période</label>
                 <Select value={String(timeRangeSec)} onValueChange={(v) => setTimeRangeSec(Number(v))}>
-                  <SelectTrigger>
+                  <SelectTrigger aria-label="Période">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1253,7 +1253,7 @@ export default function DashboardPage() {
               <div className="w-full md:w-48">
                 <label className="block text-sm font-medium mb-1">Auto‑actualisation</label>
                 <Select value={String(refreshIntervalSec)} onValueChange={(v) => setRefreshIntervalSec(Number(v))}>
-                  <SelectTrigger>
+                  <SelectTrigger aria-label="Auto‑actualisation">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

@@ -952,6 +952,8 @@ export default function WidgetComponent({ widget, onRemove, isDragging }: Widget
             variant="ghost" 
             size="icon" 
             onClick={onRemove} 
+            aria-label={`Supprimer le widget ${widget.title || 'sans titre'}`}
+            title={`Supprimer le widget ${widget.title || 'sans titre'}`}
             className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-all duration-200 flex-shrink-0 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400 rounded-lg"
           >
             <X className="h-4 w-4" />

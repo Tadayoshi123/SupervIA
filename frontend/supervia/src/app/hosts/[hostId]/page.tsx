@@ -364,7 +364,7 @@ export default function HostDetailPage() {
           {items.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
               {keyMetrics.cpu && (
-                <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800 shadow-sm hover:shadow-md transition-shadow">
+                <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800 shadow-sm hover:shadow-md transition-shadow" role="region" aria-label="Métrique CPU">
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div className="space-y-1">
@@ -385,7 +385,7 @@ export default function HostDetailPage() {
               )}
 
               {keyMetrics.memory && (
-                <Card className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800 shadow-sm hover:shadow-md transition-shadow">
+                <Card className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800 shadow-sm hover:shadow-md transition-shadow" role="region" aria-label="Métrique mémoire">
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div className="space-y-1">
@@ -406,7 +406,7 @@ export default function HostDetailPage() {
               )}
 
               {keyMetrics.disk && (
-                <Card className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border-orange-200 dark:border-orange-800 shadow-sm hover:shadow-md transition-shadow">
+                <Card className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border-orange-200 dark:border-orange-800 shadow-sm hover:shadow-md transition-shadow" role="region" aria-label="Métrique disque">
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div className="space-y-1">
@@ -427,7 +427,7 @@ export default function HostDetailPage() {
               )}
 
               {keyMetrics.load && (
-                <Card className="bg-gradient-to-r from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 border-purple-200 dark:border-purple-800 shadow-sm hover:shadow-md transition-shadow">
+                <Card className="bg-gradient-to-r from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 border-purple-200 dark:border-purple-800 shadow-sm hover:shadow-md transition-shadow" role="region" aria-label="Métrique charge système">
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div className="space-y-1">
@@ -610,9 +610,9 @@ export default function HostDetailPage() {
                           <div key={item.itemid} className="group/item p-3 rounded-lg border hover:bg-muted/50 transition-colors">
                             <div className="flex items-start justify-between">
                               <div className="flex-1 min-w-0">
-                                <h4 className="text-sm font-medium truncate" title={item.name}>
+                                <h3 className="text-sm font-medium truncate" title={item.name}>
                                   {item.name}
-                                </h4>
+                                </h3>
                                 <p className="text-xs text-muted-foreground font-mono mt-1" title={item.key_}>
                                   {item.key_}
                                 </p>

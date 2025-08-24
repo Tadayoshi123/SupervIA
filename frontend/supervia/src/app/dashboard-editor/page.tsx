@@ -453,7 +453,12 @@ function DashboardEditorPageInner() {
       <div className="editor-toolbar px-6 py-4 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link href="/dashboard" className="hover:bg-gray-100 dark:hover:bg-gray-700 p-2 rounded-lg transition-colors">
+            <Link 
+              href="/dashboard" 
+              className="hover:bg-gray-100 dark:hover:bg-gray-700 p-2 rounded-lg transition-colors"
+              aria-label="Retour au tableau de bord"
+              title="Retour au tableau de bord"
+            >
               <ArrowLeft className="h-5 w-5" />
             </Link>
             <div className="h-8 w-px bg-gray-200 dark:bg-gray-700" />
@@ -478,7 +483,12 @@ function DashboardEditorPageInner() {
               <LayoutGrid className="h-4 w-4 mr-2" />
               {density === 'spacious' ? 'Large' : 'Compact'}
             </Button>
-            <Button variant="outline" size="sm" onClick={() => setIsPreviewMode(v => !v)}>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setIsPreviewMode(v => !v)}
+              aria-label={isPreviewMode ? 'Passer en mode édition' : 'Passer en mode aperçu'}
+            >
               {isPreviewMode ? <><EyeOff className="h-4 w-4 mr-2" />Éditer</> : <><Eye className="h-4 w-4 mr-2" />Aperçu</>}
             </Button>
             {!isPreviewMode && (
@@ -505,6 +515,7 @@ function DashboardEditorPageInner() {
                 <Input 
                   className="w-56" 
                   placeholder="Rechercher un widget..." 
+                  aria-label="Rechercher un widget"
                   onKeyDown={(e) => { 
                     if (e.key === 'Enter') {
                       const q = (e.target as HTMLInputElement).value.trim();
@@ -574,6 +585,8 @@ function DashboardEditorPageInner() {
                 size="sm"
                 onClick={() => setShowRightPanel((v) => !v)}
                 className={showRightPanel ? 'bg-gray-100 dark:bg-gray-700' : ''}
+                aria-label={showRightPanel ? 'Masquer le panneau de propriétés' : 'Afficher le panneau de propriétés'}
+                title={showRightPanel ? 'Masquer le panneau de propriétés' : 'Afficher le panneau de propriétés'}
               >
                 <PanelRight className="h-4 w-4" />
               </Button>

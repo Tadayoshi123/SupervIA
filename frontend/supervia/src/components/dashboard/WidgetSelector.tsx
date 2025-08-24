@@ -157,11 +157,11 @@ export default function WidgetSelector({ hosts, onAddWidget }: WidgetSelectorPro
                   <Icon className={`h-4 w-4 ${isSelected ? 'text-white' : 'text-gray-600 dark:text-gray-300'}`} />
                 </div>
                 <div className="flex-1">
-                  <h4 className={`font-medium ${
+                  <h3 className={`font-medium ${
                     isSelected ? 'text-cyan-900 dark:text-cyan-100' : 'text-gray-900 dark:text-gray-100'
                   }`}>
                     {widget.label}
-                  </h4>
+                  </h3>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     {widget.description}
                   </p>
@@ -200,7 +200,7 @@ export default function WidgetSelector({ hosts, onAddWidget }: WidgetSelectorPro
                 {selectedType === 'problems' ? 'Hôte (optionnel)' : 'Hôte source'}
               </label>
               <Select value={selectedHostId} onValueChange={setSelectedHostId}>
-                <SelectTrigger>
+                <SelectTrigger aria-label={selectedType === 'problems' ? 'Hôte (optionnel)' : 'Hôte source'}>
                   <SelectValue placeholder="Choisir un hôte..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -220,7 +220,7 @@ export default function WidgetSelector({ hosts, onAddWidget }: WidgetSelectorPro
             <div>
               <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Métrique</label>
               <Select value={selectedItemId} onValueChange={setSelectedItemId}>
-                <SelectTrigger>
+                <SelectTrigger aria-label="Métrique">
                   <SelectValue placeholder="Choisir une métrique..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -240,7 +240,7 @@ export default function WidgetSelector({ hosts, onAddWidget }: WidgetSelectorPro
               <div>
                 <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Type de graphique</label>
                 <Select value={chartType} onValueChange={(value: 'area' | 'line' | 'bar') => setChartType(value)}>
-                  <SelectTrigger>
+                  <SelectTrigger aria-label="Type de graphique">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

@@ -139,7 +139,7 @@ export default function WidgetPropertiesPanel({ widget, onChange }: Props) {
                   onChange({ type: newType, config: newConfig });
                 }}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full" aria-label="Type de widget">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -180,7 +180,7 @@ export default function WidgetPropertiesPanel({ widget, onChange }: Props) {
                   value={widget.hostId || ''} 
                   onValueChange={(hostId) => onChange({ hostId: hostId === 'all-hosts' ? undefined : hostId })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger aria-label="Hôte source">
                     <SelectValue placeholder="Sélectionner un hôte..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -206,7 +206,7 @@ export default function WidgetPropertiesPanel({ widget, onChange }: Props) {
                   value={widget.itemId || ''} 
                   onValueChange={(itemId) => onChange({ itemId: itemId || undefined })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger aria-label="Métrique">
                     <SelectValue placeholder="Sélectionner une métrique..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -239,7 +239,7 @@ export default function WidgetPropertiesPanel({ widget, onChange }: Props) {
                   value={widget.config?.chartType as string || 'area'} 
                   onValueChange={(chartType) => setConfig({ chartType })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger aria-label="Type de graphique">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -283,6 +283,8 @@ export default function WidgetPropertiesPanel({ widget, onChange }: Props) {
                 <button
                   onClick={() => setConfig({ legend: !(widget.config?.legend !== false) })}
                   className="relative inline-flex items-center"
+                  aria-label={`${widget.config?.legend !== false ? 'Masquer' : 'Afficher'} la légende`}
+                  title={`${widget.config?.legend !== false ? 'Masquer' : 'Afficher'} la légende`}
                 >
                   {widget.config?.legend !== false ? (
                     <ToggleRight className="h-6 w-6 text-cyan-600" />
@@ -297,6 +299,8 @@ export default function WidgetPropertiesPanel({ widget, onChange }: Props) {
                 <button
                   onClick={() => setConfig({ showGrid: !(widget.config?.showGrid !== false) })}
                   className="relative inline-flex items-center"
+                  aria-label={`${widget.config?.showGrid !== false ? 'Masquer' : 'Afficher'} la grille`}
+                  title={`${widget.config?.showGrid !== false ? 'Masquer' : 'Afficher'} la grille`}
                 >
                   {widget.config?.showGrid !== false ? (
                     <ToggleRight className="h-6 w-6 text-cyan-600" />
