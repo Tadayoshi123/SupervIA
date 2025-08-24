@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.0.0](https://github.com/Tadayoshi123/SupervIA/compare/notification-service-v1.2.0...notification-service-v2.0.0) (2025-08-24)
+
+
+### ⚠ BREAKING CHANGES
+
+* **notifications:** Alert system now uses batch processing by default. Previously individual emails were sent per alert, now alerts are collected for 30 seconds and sent as a single comprehensive report.
+
+### Features
+
+* **notifications:** implement intelligent alert batching system ([31dff38](https://github.com/Tadayoshi123/SupervIA/commit/31dff387dc90ad74fd5a896a1783705f73bd7973))
+
 ## [1.2.0](https://github.com/Tadayoshi123/SupervIA/compare/notification-service-v1.1.0...notification-service-v1.2.0) (2025-08-23)
 
 
