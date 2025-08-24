@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/Tadayoshi123/SupervIA/compare/frontend-v1.2.0...frontend-v1.3.0) (2025-08-24)
+
+
+### Features
+
+* **accessibility:** achieve 100/100 Lighthouse accessibility score ([5a5eebc](https://github.com/Tadayoshi123/SupervIA/commit/5a5eebc7a72e4a4d888e7e55ed13c78007a5d077))
+
 ## [1.2.0](https://github.com/Tadayoshi123/SupervIA/compare/frontend-v1.1.0...frontend-v1.2.0) (2025-08-23)
 
 
