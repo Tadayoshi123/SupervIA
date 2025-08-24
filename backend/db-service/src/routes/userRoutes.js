@@ -102,8 +102,8 @@ router.get('/users/email/:email', getUserByEmail);
  * @swagger
  * /api/internal/users/email/{email}:
  *   get:
- *     summary: [INTERNE] Récupère un utilisateur par email (incluant le hash du mot de passe)
- *     description: Endpoint réservé aux appels inter-services avec clé interne. Ne pas exposer publiquement.
+ *     summary: "[INTERNE] Récupère un utilisateur par email avec hash du mot de passe"
+ *     description: "Endpoint réservé aux appels inter-services avec clé interne. Ne pas exposer publiquement."
  *     tags: [Users]
  *     security:
  *       - internalApiKey: []
@@ -113,13 +113,14 @@ router.get('/users/email/:email', getUserByEmail);
  *         schema:
  *           type: string
  *         required: true
+ *         description: "L'email de l'utilisateur"
  *     responses:
  *       200:
- *         description: L'utilisateur trouvé (incluant password)
+ *         description: "L'utilisateur trouvé (incluant password)"
  *       404:
- *         description: Utilisateur non trouvé
+ *         description: "Utilisateur non trouvé"
  *       401:
- *         description: Clé API interne manquante ou invalide
+ *         description: "Clé API interne manquante ou invalide"
  */
 router.get('/internal/users/email/:email', getUserByEmailInternal);
 
