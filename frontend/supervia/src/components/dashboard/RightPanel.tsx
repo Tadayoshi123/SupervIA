@@ -515,7 +515,7 @@ export default function RightPanel({ selectedWidget, onChange, onAddWidget, widg
                     onChange={(value) => onChange({ config: { ...(selectedWidget.config || {}), cooldownSec: value } as any })} 
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    Évite l'envoi de notifications trop fréquentes pour le même widget
+                    Évite l&apos;envoi de notifications trop fréquentes pour le même widget
                   </p>
                 </div>
               </div>
