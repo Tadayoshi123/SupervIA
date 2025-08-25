@@ -309,6 +309,6 @@ SupervIA utilise et s'appuie sur ces excellentes technologies :
 
 **⭐ Si SupervIA vous aide, n'hésitez pas à donner une étoile !**
 
-[🐛 Signaler un bug](https://github.com/your-username/SupervIA/issues) • [💡 Demander une feature](https://github.com/your-username/SupervIA/discussions) • [📧 Contact](mailto:contact@supervia.dev)
+[🐛 Signaler un bug](https://github.com/Tadayoshi123/SupervIA/issues) • [💡 Demander une feature](https://github.com/Tadayoshi123/SupervIA/discussions)
 
 </div>
