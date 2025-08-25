@@ -285,13 +285,6 @@ git push origin feature/nouvelle-fonctionnalite
 - [ ] **Plugin System** : Connecteurs tiers (Grafana, Prometheus)
 - [ ] **IA Conversationnelle** : Chatbot assistant supervision
 
-
-## 📄 License
-
-Ce projet est sous licence **MIT**. Voir [LICENSE](LICENSE) pour plus de détails.
-
----
-
 ## 🙏 Remerciements
 
 SupervIA utilise et s'appuie sur ces excellentes technologies :
